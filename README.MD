@@ -1,6 +1,6 @@
 # 虚拟手柄
 
-go build 得到 uinput_Controller
+go build 得到 uinputJoystick
 
 adb push到/data/local/tmp下运行
 

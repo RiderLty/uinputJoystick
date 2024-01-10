@@ -1,4 +1,4 @@
-module uinput_Controller
+module uinputJoystick
 
 go 1.18
 
