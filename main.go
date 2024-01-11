@@ -125,20 +125,20 @@ func main() {
 		ioctl(deviceFile.Fd(), UISETKEYBIT(), uintptr(evdev.BtnMode))
 
 		var absMax [absCnt]int32
-		absMax[evdev.AbsoluteX] = 65535
-		absMax[evdev.AbsoluteY] = 65535
-		absMax[evdev.AbsoluteZ] = 65535
-		absMax[evdev.AbsoluteRZ] = 65535
-		absMax[evdev.AbsoluteGas] = 1023
-		absMax[evdev.AbsoluteBrake] = 1023
+		absMax[evdev.AbsoluteX] = 1000
+		absMax[evdev.AbsoluteY] = 1000
+		absMax[evdev.AbsoluteZ] = 1000
+		absMax[evdev.AbsoluteRZ] = 1000
+		absMax[evdev.AbsoluteGas] = 1000
+		absMax[evdev.AbsoluteBrake] = 1000
 		absMax[evdev.AbsoluteHat0X] = 1
 		absMax[evdev.AbsoluteHat0Y] = 1
 
 		var absMin [absCnt]int32
-		absMin[evdev.AbsoluteX] = 0
-		absMin[evdev.AbsoluteY] = 0
-		absMin[evdev.AbsoluteZ] = 0
-		absMin[evdev.AbsoluteRZ] = 0
+		absMin[evdev.AbsoluteX] = -1000
+		absMin[evdev.AbsoluteY] = -1000
+		absMin[evdev.AbsoluteZ] = -1000
+		absMin[evdev.AbsoluteRZ] = -1000
 		absMin[evdev.AbsoluteGas] = 0
 		absMin[evdev.AbsoluteBrake] = 0
 		absMin[evdev.AbsoluteHat0X] = -1

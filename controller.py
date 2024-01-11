@@ -64,15 +64,17 @@ class controller():
             [[EV_KEY, code, downUp]]), self.sendArr)
 
     def sendAbs(self, code, value):
+        if value == None:
+            return
         if code == ABS_HAT0X or code == ABS_HAT0Y:  # 直接发
             self.udpSocket.sendto(pack_events(
                 [[EV_ABS, code, value]]), self.sendArr)
         elif code == ABS_LT or code == ABS_RT:  # 0~1 转换发
             self.udpSocket.sendto(pack_events(
-                [[EV_ABS, code, int(value * 1023)]]), self.sendArr)
+                [[EV_ABS, code, int(value * 1000)]]), self.sendArr)
         else:  # -1~1 转换发
             self.udpSocket.sendto(pack_events(
-                [[EV_ABS, code, int(value*32767 + 32767)]]), self.sendArr)
+                [[EV_ABS, code, int(value * 1000)]]), self.sendArr)
 
 
 class xbox_controller():
@@ -85,14 +87,14 @@ class xbox_controller():
     def releaseBTN(self, code):  # 松开
         self.controller.sendBtn(code, UP)
 
-    def clickBTN(self,code,downTime = 0.05):
+    def clickBTN(self,code,ms = 50):
         self.controller.sendBtn(code, DOWN)
-        time.sleep(downTime)
+        time.sleep(ms/1000)
         self.controller.sendBtn(code, UP)
 
 
     def setDpad(self, dpad, value):  # DPAD_X or DPAD_Y  value = -1,0,1 方向键，无法同时按下相反方向
-        self.controller.sendAbs(DPAD_X, value)
+        self.controller.sendAbs(dpad, value)
 
     def setLT(self, value):  # 0~1 float
         self.controller.sendAbs(ABS_LT, value)
@@ -101,16 +103,12 @@ class xbox_controller():
         self.controller.sendAbs(ABS_RT, value)
 
     def setLS(self, x=None, y=None):  # -1~1 float None为不修改
-        if x:
-            self.controller.sendAbs(ABS_X, x)
-        if y:
-            self.controller.sendAbs(ABS_Y, y)
+        self.controller.sendAbs(ABS_X, x)
+        self.controller.sendAbs(ABS_Y, y)    
 
     def setRS(self, x=None, y=None):  # -1~1 float None为不修改
-        if x:
-            self.controller.sendAbs(ABS_Z, x)
-        if y:
-            self.controller.sendAbs(ABS_RZ, y)
+        self.controller.sendAbs(ABS_Z, x)
+        self.controller.sendAbs(ABS_RZ, y)
 
 
 if __name__ == "__main__":
