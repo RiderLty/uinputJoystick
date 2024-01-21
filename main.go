@@ -95,11 +95,50 @@ func screenCap() {
 
 }
 
-func main() {
+func create_u_input_mouse_keyboard() *os.File {
+	deviceFile, err := os.OpenFile("/dev/uinput", syscall.O_WRONLY|syscall.O_NONBLOCK, 0660)
+	if err != nil {
+		logger.Errorf("create u_input mouse error:%v", err)
+		return nil
+	}
+	ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventSync))
+	ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventKey))
+	ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventRelative))
+	ioctl(deviceFile.Fd(), UISETEVRELBIT(), uintptr(evdev.RelativeX))
+	ioctl(deviceFile.Fd(), UISETEVRELBIT(), uintptr(evdev.RelativeY))
+	ioctl(deviceFile.Fd(), UISETEVRELBIT(), uintptr(evdev.RelativeWheel))
+	ioctl(deviceFile.Fd(), UISETEVRELBIT(), uintptr(evdev.RelativeHWheel))
+	for i := 0x110; i < 0x117; i++ {
+		ioctl(deviceFile.Fd(), UISETKEYBIT(), uintptr(i))
+	}
+	for i := 0; i < 256; i++ {
+		ioctl(deviceFile.Fd(), UISETKEYBIT(), uintptr(i))
+	}
 
+	uiDev := UinputUserDev{
+		Name: toUInputName([]byte("virtual_mouse_keyboard(uinput)")),
+		ID: InputID{
+			BusType: 0,
+			Vendor:  randUInt16Num(0x2000),
+			Product: randUInt16Num(0x2000),
+			Version: randUInt16Num(0x20),
+		},
+		EffectsMax: 0,
+		AbsMax:     [absCnt]int32{},
+		AbsMin:     [absCnt]int32{},
+		AbsFuzz:    [absCnt]int32{},
+		AbsFlat:    [absCnt]int32{},
+	}
+	deviceFile.Write(uInputDevToBytes(uiDev))
+	createDevice(deviceFile)
+	return deviceFile
+}
+
+func create_u_input_controller() *os.File {
 	deviceFile, err := os.OpenFile("/dev/uinput", syscall.O_WRONLY|syscall.O_NONBLOCK, 0660)
 	if err != nil {
 		logger.Errorf("create u_input touch_screen error:%v", err)
+		return nil
 	} else {
 		ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventSync))
 		ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventKey))
@@ -160,53 +199,64 @@ func main() {
 		}
 		deviceFile.Write(uInputDevToBytes(uiDev))
 		createDevice(deviceFile)
-		logger.Info("已创建虚拟手柄 Xbox Wireless Controller(uinput)")
-		ev_sync := evdev.Event{Type: 0, Code: 0, Value: 0}
+		return deviceFile
+	}
+}
+func main() {
+	joystick_deviceFile := create_u_input_controller()
+	mouse_kb_deviceFile := create_u_input_mouse_keyboard()
+	if joystick_deviceFile == nil {
+		return
+	}
+	logger.Info("已创建虚拟手柄 Xbox Wireless Controller(uinput)")
+	ev_sync := evdev.Event{Type: 0, Code: 0, Value: 0}
 
-		go screenCap()
+	go screenCap()
 
-		listen, err := net.ListenUDP("udp", &net.UDPAddr{
-			IP:   net.IPv4(0, 0, 0, 0),
-			Port: 8889,
-		})
-		if err != nil {
-			logger.Errorf("udp error : %v", err)
-			return
-		}
-		defer listen.Close()
+	listen, err := net.ListenUDP("udp", &net.UDPAddr{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Port: 8889,
+	})
+	if err != nil {
+		logger.Errorf("%v", err)
+		return
+	}
+	defer listen.Close()
 
-		recv_ch := make(chan []byte)
-		go func() {
-			for {
-				var buf [1024]byte
-				n, _, err := listen.ReadFromUDP(buf[:])
-				if err != nil {
-					break
-				}
-				recv_ch <- buf[:n]
-			}
-		}()
-		logger.Infof("已准备接收远程事件 udp:0.0.0.0:%d", 8889)
+	recv_ch := make(chan []byte)
+	go func() {
 		for {
-			select {
-			case <-global_close_signal:
-				return
-			case pack := <-recv_ch:
-				// logger.Debugf("%v", pack)
-				event_count := int(pack[0])
-				for i := 0; i < event_count; i++ {
-					event := &evdev.Event{
-						Type:  evdev.EventType(uint16(binary.LittleEndian.Uint16(pack[8*i+1 : 8*i+3]))),
-						Code:  uint16(binary.LittleEndian.Uint16(pack[8*i+3 : 8*i+5])),
-						Value: int32(binary.LittleEndian.Uint32(pack[8*i+5 : 8*i+9])),
-					}
-					write_events := make([]*evdev.Event, 0)
-					write_events = append(write_events, event)
-					write_events = append(write_events, &ev_sync)
-					sendEvents(deviceFile, write_events)
+			var buf [1024]byte
+			n, _, err := listen.ReadFromUDP(buf[:])
+			if err != nil {
+				break
+			}
+			recv_ch <- buf[:n]
+		}
+	}()
+	logger.Infof("已准备接收远程事件 udp:0.0.0.0:%d", 8889)
+	for {
+		select {
+		case <-global_close_signal:
+			return
+		case pack := <-recv_ch:
+			// logger.Debugf("%v", pack)
+			event_count := int(pack[0])
+			for i := 0; i < event_count; i++ {
+				event := &evdev.Event{
+					Type:  evdev.EventType(uint16(binary.LittleEndian.Uint16(pack[8*i+1 : 8*i+3]))),
+					Code:  uint16(binary.LittleEndian.Uint16(pack[8*i+3 : 8*i+5])),
+					Value: int32(binary.LittleEndian.Uint32(pack[8*i+5 : 8*i+9])),
+				}
+				write_events := make([]*evdev.Event, 0)
+				write_events = append(write_events, event)
+				write_events = append(write_events, &ev_sync)
+				if event.Type == evdev.EventAbsolute || (event.Type == evdev.EventKey && event.Code >= uint16(evdev.BtnA) && event.Code <= uint16(evdev.BtnThumbR)) {
+					sendEvents(joystick_deviceFile, write_events)
+				} else {
+					sendEvents(mouse_kb_deviceFile, write_events)
 				}
 			}
 		}
 	}
-
 }
