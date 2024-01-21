@@ -349,7 +349,7 @@ if __name__ == "__main__":
     # mk.clickKey(KEY_D,ms=1)
     # mk.clickKey(KEY_E,ms=1)
     
-    mk.clickKey(MOUSE_BTN_MIDDLE)
+    mk.clickKey(MOUSE_BTN_RIGHT)
     
     # for i in range(100):
     #     mk.move(x=-1,y=1)

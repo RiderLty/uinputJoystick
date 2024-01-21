@@ -1,12 +1,6 @@
 import random
 from controller import *
-from time import sleep as s_sleep
-
-from time import sleep
-
-
-
-    
+from time import sleep as s_sleep    
     
 def sleep(ms):
     s_sleep(ms/1000)
