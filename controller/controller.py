@@ -265,30 +265,30 @@ class mouse_keyboard_controller():
 
 if __name__ == "__main__":
     print("test start ")
-    ct = controller("192.168.3.43:8889")
-    mk = mouse_keyboard_controller("192.168.3.43:8889")
+    ct = controller("192.168.3.103:8889")
+    mk = mouse_keyboard_controller("192.168.3.103:8889")
 
-    # def testButton(BTN, name):
-    #     print("click ", name)
-    #     ct.sendBtn(BTN, DOWN)
-    #     time.sleep(0.2)
-    #     ct.sendBtn(BTN, UP)
-    #     time.sleep(0.2)
+    def testButton(BTN, name):
+        print("click ", name)
+        ct.sendBtn(BTN, DOWN)
+        time.sleep(0.2)
+        ct.sendBtn(BTN, UP)
+        time.sleep(0.2)
 
-    # for (code, name) in [
-    #     (BTN_A, "BTN_A"),
-    #     (BTN_B, "BTN_B"),
-    #     (BTN_X, "BTN_X"),
-    #     (BTN_Y, "BTN_Y"),
-    #     (BTN_LS, "BTN_LS"),
-    #     (BTN_RS, "BTN_RS"),
-    #     (BTN_LB, "BTN_LB"),
-    #     (BTN_RB, "BTN_RB"),
-    #     # (BTN_SELECT, "BTN_SELECT"),
-    #     # (BTN_START, "BTN_START"),
-    #     # (BTN_MODE, "BTN_MODE"),
-    # ]:
-    #     testButton(code, name)
+    for (code, name) in [
+        (BTN_A, "BTN_A"),
+        (BTN_B, "BTN_B"),
+        (BTN_X, "BTN_X"),
+        (BTN_Y, "BTN_Y"),
+        (BTN_LS, "BTN_LS"),
+        (BTN_RS, "BTN_RS"),
+        (BTN_LB, "BTN_LB"),
+        (BTN_RB, "BTN_RB"),
+        # (BTN_SELECT, "BTN_SELECT"),
+        # (BTN_START, "BTN_START"),
+        # (BTN_MODE, "BTN_MODE"),
+    ]:
+        testButton(code, name)
 
     # for i in range(64):
     #     ct.sendAbs(ABS_LT, i/64)
@@ -343,11 +343,11 @@ if __name__ == "__main__":
     # c.clickBTN(BTN_RS, 0.3)
 
 
-    # mk.clickKey(KEY_A,ms=1)
-    # mk.clickKey(KEY_B,ms=1)
-    # mk.clickKey(KEY_C,ms=1)
-    # mk.clickKey(KEY_D,ms=1)
-    # mk.clickKey(KEY_E,ms=1)
+    mk.clickKey(KEY_A,ms=1)
+    mk.clickKey(KEY_B,ms=1)
+    mk.clickKey(KEY_C,ms=1)
+    mk.clickKey(KEY_D,ms=1)
+    mk.clickKey(KEY_E,ms=1)
     
     mk.clickKey(MOUSE_BTN_RIGHT)
     
