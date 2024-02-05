@@ -430,3 +430,4 @@ stopFlag = ThreadSafeValue(True)  # 表示已经停止
 
 if __name__ == "__main__":
     threading.Thread(target=server).start()
+    
