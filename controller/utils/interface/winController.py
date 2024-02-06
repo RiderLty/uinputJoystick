@@ -1,4 +1,5 @@
 import ctypes
+
 from ._controller import _controller
 import vgamepad
 from .winDefines import KEY, MOUSE, BTN
@@ -9,7 +10,6 @@ from time import sleep
 
 
 _MapVirtualKey = ctypes.windll.user32.MapVirtualKeyA
-
 
 class controller(_controller):
 
@@ -31,7 +31,7 @@ class controller(_controller):
         self.LS_Y = 0
         self.RS_X = 0
         self.RS_Y = 0
-        for k in self.downingKeys:
+        for k in [x for x in self.downingKeys]:
             self.release(k)
 
     def press(self, code) -> None:
@@ -53,7 +53,7 @@ class controller(_controller):
 
     def release(self, code) -> None:
         if code in self.downingKeys:
-            self.downingKeys.remove(code) 
+            self.downingKeys.remove(code)
         if isinstance(code, KEY):
             win32api.keybd_event(code.value, _MapVirtualKey(
                 code.value, 0), win32con.KEYEVENTF_KEYUP, 0)

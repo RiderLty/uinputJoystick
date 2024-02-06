@@ -47,7 +47,7 @@ class controller(_controller):
         self.releaseAll()
         
     def releaseAll(self,) -> None:
-        for k in self.downingKeys:
+        for k in [x for x in self.downingKeys]:
             self.release(k)
         self.setLS(0,0)
         self.setRS(0,0)
@@ -98,13 +98,13 @@ class controller(_controller):
         if x != None:
             self.udpSocket.sendto(pack_events([[EV_ABS, ABS_X, int(x * 1000)]]), self.sendArr)
         if y != None:
-            self.udpSocket.sendto(pack_events([[EV_ABS, ABS_Y, int(y * 1000)]]), self.sendArr)
+            self.udpSocket.sendto(pack_events([[EV_ABS, ABS_Y, int(y * -1000)]]), self.sendArr)
         
     def setRS(self,x = None,y = None) -> None:
         if x != None:
             self.udpSocket.sendto(pack_events([[EV_ABS, ABS_Z, int(x * 1000)]]), self.sendArr)
         if y != None:
-            self.udpSocket.sendto(pack_events([[EV_ABS, ABS_RZ, int(y * 1000)]]), self.sendArr)
+            self.udpSocket.sendto(pack_events([[EV_ABS, ABS_RZ, int(y * -1000)]]), self.sendArr)
 
     def setLT(self,value) -> None:
         self.udpSocket.sendto(pack_events([[EV_ABS, ABS_LT, int(value * 1000)]]), self.sendArr)

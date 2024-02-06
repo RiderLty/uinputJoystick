@@ -9,31 +9,31 @@ class _controller():
     def releaseAll(self,) -> None:
         pass
 
-    def press() -> None:
+    def press(self,) -> None:
         pass
 
-    def release() -> None:
+    def release(self,) -> None:
         pass
 
-    def click() -> None:
+    def click(self,) -> None:
         pass
 
-    def mouseMove() -> None:
+    def mouseMove(self,) -> None:
         pass
 
-    def mouseWheel() -> None:
+    def mouseWheel(self,) -> None:
         pass
 
-    def setLS() -> None:
+    def setLS(self,) -> None:
         pass
 
-    def setRS() -> None:
+    def setRS(self,) -> None:
         pass
 
-    def setLT() -> None:
+    def setLT(self,) -> None:
         pass
 
-    def setRT() -> None:
+    def setRT(self,) -> None:
         pass
 
 

@@ -253,8 +253,7 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
         while runningFlag.get_value() == True:
             try:
                 sc_img = m.grab(rect)
-                img = Image.frombytes("RGB", sc_img.size,
-                                      sc_img.bgra, "raw", "BGRX")
+                img = Image.frombytes("RGB", sc_img.size,sc_img.bgra, "raw", "BGRX")
                 out = ocr.ocr(img)
                 print("\n=============================================")
                 allText = "".join([x["text"] for x in out]).strip()
