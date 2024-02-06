@@ -2,7 +2,7 @@ import threading
 from time import sleep as s_sleep
 
 
-class controller():
+class _controller():
     def __init__(self) -> None:
         pass
     
