@@ -12,10 +12,10 @@ class BTN(Enum):
     BTN_SELECT = 0x13A
     BTN_START = 0x13B
     BTN_MODE = 0x13C
-    BTN_DPAD_UP = 1
-    BTN_DPAD_DOWN = -1 
-    BTN_DPAD_LEFT = 1 
-    BTN_DPAD_RIGHT = -1 
+    BTN_DPAD_UP = -1
+    BTN_DPAD_DOWN = 1 
+    BTN_DPAD_LEFT = -2
+    BTN_DPAD_RIGHT = 2 
 
 class KEY(Enum):
     KEY_ESC = 1

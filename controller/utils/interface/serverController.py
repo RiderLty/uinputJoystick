@@ -57,10 +57,10 @@ class controller(_controller):
 
     def press(self, code) -> None:
         self.downingKeys.add(code)
-        if code in [BTN.BTN_DPAD_DOWN,BTN.BTN_DPAD_UP]:
+        if code == BTN.BTN_DPAD_DOWN or code == BTN.BTN_DPAD_UP:
             self.udpSocket.sendto(pack_events( [[EV_ABS, ABS_HAT0Y, code.value]]), self.sendArr)
-        elif code in [BTN.BTN_DPAD_LEFT,BTN.BTN_DPAD_RIGHT]:
-            self.udpSocket.sendto(pack_events( [[EV_ABS, ABS_HAT0X, code.value]]), self.sendArr)
+        elif code == BTN.BTN_DPAD_LEFT or code == BTN.BTN_DPAD_RIGHT:
+            self.udpSocket.sendto(pack_events( [[EV_ABS, ABS_HAT0X, code.value //2]]), self.sendArr)
         else:
             if isinstance(code, KEY) or isinstance(code, MOUSE) or isinstance(code, BTN):
                 self.udpSocket.sendto(pack_events([[EV_KEY, code.value, DOWN]]), self.sendArr)
@@ -70,9 +70,9 @@ class controller(_controller):
     def release(self, code) -> None:
         if code in self.downingKeys:
             self.downingKeys.remove(code) 
-        if code in [BTN.BTN_DPAD_DOWN,BTN.BTN_DPAD_UP]:
+        if code == BTN.BTN_DPAD_DOWN or code == BTN.BTN_DPAD_UP:
             self.udpSocket.sendto(pack_events( [[EV_ABS, ABS_HAT0Y, 0]]), self.sendArr)
-        elif code in [BTN.BTN_DPAD_LEFT,BTN.BTN_DPAD_RIGHT]:
+        elif code == BTN.BTN_DPAD_LEFT or code == BTN.BTN_DPAD_RIGHT:
             self.udpSocket.sendto(pack_events( [[EV_ABS, ABS_HAT0X, 0]]), self.sendArr)
         else:
             if isinstance(code, KEY) or isinstance(code, MOUSE) or isinstance(code, BTN):

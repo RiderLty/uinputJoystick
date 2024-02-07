@@ -79,6 +79,9 @@ def openHT():  # 开核桃 使用方向键导航 ，先到坐上然后用手柄�
     ctr.click(BTN.BTN_A, 10)
     ctr.sleep(300)
     ctr.click(BTN.BTN_A, 10)
+    ctr.sleep(300)
+    ctr.click(BTN.BTN_A, 10)
+    ctr.sleep(300)
     ctr.wait()
 
 
