@@ -65,7 +65,7 @@ func screenCap() {
 
 	handleScreenPNG := func(w http.ResponseWriter, r *http.Request) {
 		// start := time.Now()
-		c := exec.Command("bash", "-c", "screencap -p")
+		c := exec.Command("sh", "-c", "screencap -p")
 		stdout, err := c.StdoutPipe()
 		if err != nil {
 			logger.Error(err)
