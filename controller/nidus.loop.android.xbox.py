@@ -26,6 +26,8 @@ pip install aircv bottle paste requests
 
 然后python nidus.loop.android.xbox.py运行
 
+# ⚠️ 建议使用 adb shell wm size 1080x1920 调整为1080P分辨 保证图像识别准确
+
 XBOX设置
 推荐游戏内 UI 150%
 关闭辅助瞄准
@@ -33,7 +35,7 @@ XBOX设置
 
 '''
 
-IP = "192.168.3.43" #修改为手机IP
+IP = "102.0.0.1" #修改为手机IP
 # 访问  http://[IP]:4443
 
 SCRIPT_PATH = os.path.abspath(__file__)
