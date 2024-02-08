@@ -4,11 +4,8 @@ from utils.taskScheduler import scheduled
 from utils.interface.winController import * #windows用
 ctr = scheduled(controller=controller() , DEBUG = True)
 
-
-# from utils.interface.serverController import * #其他平台用
-# ctr = scheduled(controller=controller("127.0.0.1:8889"))
-
-
+# from utils.interface.serverController import * #搭配安卓控制用
+# ctr = scheduled(controller=controller("127.0.0.1:8889")) #换成android设备的ip
 
 def helloWorld():
     ctr.click(KEY.KEY_H)
@@ -25,7 +22,6 @@ def helloWorld():
     ctr.click(KEY.KEY_L)
     ctr.click(KEY.KEY_D)
     ctr.wait() 
-    
 
 def testJoyStick():
     for k in BTN:
@@ -80,8 +76,9 @@ def testBreak():
     ctr.click(KEY.KEY_5,10)
     ctr.sleep(1000)
     ctr.wait()
-# testMouse()
-# testJoyStick()
-# helloWorld()1
+
+helloWorld()
+testMouse()
+testJoyStick()
 testBreak()
 ctr.stop()

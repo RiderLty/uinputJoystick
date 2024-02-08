@@ -10,24 +10,31 @@ from PIL import Image
 import aircv as ac
 import numpy as np
 
-# README
-# 运行在termux下
-# 先安装依赖：
-# apt update && apt upgrade -y
-# apt install python make wget termux-exec clang libjpeg-turbo freetype -y
-# env INCLUDE="$PREFIX/include" LDFLAGS=" -lm" pip install Pillow
-# pkg install python-numpy
-# pkg install opencv-python
-# pip install aircv bottle paste requests
 
-# XBOX设置
-# 推荐游戏内 UI 150%
-# 关闭辅助瞄准
-# 关闭自动待机
+'''
+脚本说明
+
+运行在termux下
+先安装依赖：
+
+apt update && apt upgrade -y
+apt install python make wget termux-exec clang libjpeg-turbo freetype -y
+env INCLUDE="$PREFIX/include" LDFLAGS=" -lm" pip install Pillow
+pkg install python-numpy
+pkg install opencv-python
+pip install aircv bottle paste requests
+
+然后python nidus.loop.android.xbox.py运行
+
+XBOX设置
+推荐游戏内 UI 150%
+关闭辅助瞄准
+关闭自动待机
+
+'''
 
 IP = "192.168.3.43" #修改为手机IP
 # 访问  http://[IP]:4443
-# 准备工作做好后，ESC暂停，然后网页端点击开始
 
 SCRIPT_PATH = os.path.abspath(__file__)
 class ThreadSafeValue:
