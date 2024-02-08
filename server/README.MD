@@ -19,7 +19,7 @@
 使用环境 termux
 ```
 pkg i golang -y
-git clone https://github.com/RiderLty/uinputJoystick
+git clone https://github.com/RiderLty/uinputJoystick --depth=1
 cd uinputJoystick/server
 CGO_ENABLE=0 GOOS=linux go build -ldflags="-s -w"
 ```
