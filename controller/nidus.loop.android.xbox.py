@@ -35,7 +35,7 @@ XBOX设置
 
 '''
 
-IP = "102.0.0.1" #修改为手机IP
+IP = "127.0.0.1" #修改为手机IP
 # 访问  http://[IP]:4443
 
 SCRIPT_PATH = os.path.abspath(__file__)
