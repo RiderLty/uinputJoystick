@@ -1,40 +1,35 @@
 import io
+import os
 from time import sleep as s_sleep
-from time import sleep
 import threading
 from bottle import *
 import requests
-# from utils.ocrTool import ocrTool
-# from utils.screenCap import screenCap
 from utils.taskScheduler import scheduled
-# from utils.interface.winController import *
 from utils.interface.serverController import *
 from PIL import Image
 import aircv as ac
 import numpy as np
+
 # README
-#
+# 运行在termux下
 # 先安装依赖：
-# pip install pywin32 cnocr[ort-cpu] mss vgamepad bottle paste Pillow
-#
-# windows分辨率 1920x1080 缩放100%
-# 推荐游戏内 UI 200%
-#
-# 改键
-# 跳跃N
-# 开火L
-# 瞄准J
-# 重击U
-#
-# 手机浏览器访问  http://[电脑IP]:4443
+# apt update && apt upgrade -y
+# apt install python make wget termux-exec clang libjpeg-turbo freetype -y
+# env INCLUDE="$PREFIX/include" LDFLAGS=" -lm" pip install Pillow
+# pkg install python-numpy
+# pkg install opencv-python
+# pip install aircv bottle paste requests
+
+# XBOX设置
+# 推荐游戏内 UI 150%
+# 关闭辅助瞄准
+# 关闭自动待机
+
+IP = "192.168.3.43" #修改为手机IP
+# 访问  http://[IP]:4443
 # 准备工作做好后，ESC暂停，然后网页端点击开始
 
-# XBOX挂机的时候记得关闭辅助瞄准
-
-IP = "192.168.3.43"
 SCRIPT_PATH = os.path.abspath(__file__)
-
-
 class ThreadSafeValue:
     def __init__(self, value):
         self._value = value
@@ -47,15 +42,11 @@ class ThreadSafeValue:
     def get_value(self):
         with self._lock:
             return self._value
-
-
+        
 def sleep(ms):
     s_sleep(ms/1000)
-
-
 # ctr = scheduled(controller=controller())
 ctr = scheduled(controller=controller(IP+":8889"))
-
 
 def openHT():  # 开核桃 使用方向键导航 ，先到坐上然后用手柄确认
     for _ in range(10):
@@ -208,7 +199,7 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
     while runningFlag.get_value() == True:
         # try:
         response = requests.get(f"http://{IP}:8888/screen.png")
-        sc_img = np.array(Image.open(BytesIO(response.content)))
+        sc_img = np.array(Image.open(io.BytesIO(response.content)))
         stopConf = findImg(sc_img, stopImgList)
         hetaoConf = findImg(sc_img, hetaoImgList)
         print("conf:",stopConf,hetaoConf)
@@ -362,14 +353,3 @@ stopFlag = ThreadSafeValue(True)  # 表示已经停止
 
 if __name__ == "__main__":
     threading.Thread(target=server).start()
-    # print(__file__)
-    # script_path = os.path.abspath(__file__)
-    # script_dir = os.path.dirname(script_path)
-    # assets_dir = os.path.join(script_dir, 'assets')
-    # stopImg = loadImage(os.path.join(assets_dir, 'stop'))
-    # hetaoImg = loadImage(os.path.join(assets_dir, 'hetao'))
-    # response  = requests.get(f"http://{IP}:8888/screen.png")
-    # sc_img = Image.open(BytesIO(response.content))
-    # bigImg = np.array(sc_img)
-    # print(findImg(bigImg , stopImg))
-    # ctr.stop()
