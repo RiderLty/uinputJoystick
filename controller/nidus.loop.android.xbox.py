@@ -12,6 +12,8 @@ from utils.interface.serverController import *
 from PIL import Image
 import aircv as ac
 import numpy as np
+import socket
+
 # README
 #
 # 先安装依赖：
@@ -21,10 +23,12 @@ import numpy as np
 # 推荐游戏内 UI 200%
 #
 # 改键
-# 跳跃N
-# 开火L
-# 瞄准J
-# 重击U
+# xbox里 
+# 方向左 瞄准
+# 方向右 射击（防止弹出聊天框）
+
+
+
 #
 # 手机浏览器访问  http://[电脑IP]:4443
 # 准备工作做好后，ESC暂停，然后网页端点击开始
@@ -131,14 +135,16 @@ def mainLoop(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
     stopFlag.set_value(False)
     while runningFlag.get_value() == True:
         ctr.setLS(-1, -1)  # 左后方走
-        ctr.setRT(1)  # 女魔发射
-        ctr.sleep(50)
-        ctr.setRT(0)
+        # ctr.setRT(1)  # 女魔发射
+        # ctr.sleep(50)
+        # ctr.setRT(0)
+        ctr.click(BTN.BTN_DPAD_RIGHT)
         ctr.sleep(800)
         panZX4()  # 四发盘子
-        ctr.setRT(1)  # 女魔发射
-        ctr.sleep(50)
-        ctr.setRT(0)
+        # ctr.setRT(1)  # 女魔发射
+        # ctr.sleep(50)
+        # ctr.setRT(0)
+        ctr.click(BTN.BTN_DPAD_RIGHT)
         ctr.sleep(800)
         panZX4()  # 四发盘子
         skill(4)  # 4技能
@@ -162,9 +168,10 @@ def mainLoop(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
         ctr.sleep(1000)
         ctr.click(BTN.BTN_A)  # 跳跃
         ctr.sleep(200)
-        ctr.setLT(1)
-        ctr.sleep(200)
-        ctr.setLT(0)  # 瞄准触发蜘蛛赋能
+        # ctr.setLT(1)
+        # ctr.sleep(200)
+        # ctr.setLT(0)  # 瞄准触发蜘蛛赋能
+        ctr.click(BTN.BTN_DPAD_LEFT,200)
         ctr.setLS(0, 0)
         ctr.sleep(300)
         ctr.wait()
@@ -281,11 +288,37 @@ def stop():
 
 @route("/test")  # 测试函数放在这里运行
 def test():
-    ctr.setRS(0, 1)
-    ctr.sleep(300)
-    ctr.setLS(0, 0)
-    ctr.wait()
-
+    # ctr.click(BTN.BTN_DPAD_DOWN)
+    # ctr.sleep(100)
+    # ctr.click(BTN.BTN_DPAD_RIGHT)
+    # ctr.sleep(100)
+    # ctr.click(BTN.BTN_DPAD_UP)
+    # ctr.sleep(100)
+    # ctr.click(BTN.BTN_DPAD_LEFT)
+    # ctr.sleep(100)
+    # ctr.wait()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    sock.sendto(b'\x01\x00\x00\x00\x00\x00\x00', ('192.168.3.104', 5644))
+    s_sleep(0.2)
+    sock.sendto(b'\x00\x00\x00\x00\x00\x00\x00' ,('192.168.3.104', 5644))
+    s_sleep(0.3)
+    sock.sendto(b'\x00\x00\x1a\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.01)
+    sock.sendto(b'\x00\x00,\x1a\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.02)
+    sock.sendto(b'\x00\x00\x1a\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.02)
+    sock.sendto(b'\x02\x00\x1a\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.01)
+    sock.sendto(b'\x00\x00\x1a\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.01)
+    sock.sendto(b'\x00\x00,\x1a\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.06)
+    sock.sendto(b'\x00\x00\x1a\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    s_sleep(0.5)
+    sock.sendto(b'\x00\x00\x00\x00\x00\x00\x00\x00', ("192.168.3.104", 5643))
+    sock.close()
 
 @route("/screen")
 def screen():
