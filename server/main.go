@@ -65,7 +65,7 @@ func screenCap() {
 
 	handleScreenPNG := func(w http.ResponseWriter, r *http.Request) {
 		// start := time.Now()
-		c := exec.Command("bash", "-c", "screencap -p")
+		c := exec.Command("sh", "-c", "screencap -p")
 		stdout, err := c.StdoutPipe()
 		if err != nil {
 			logger.Error(err)
@@ -137,7 +137,7 @@ func create_u_input_mouse_keyboard() *os.File {
 func create_u_input_controller() *os.File {
 	deviceFile, err := os.OpenFile("/dev/uinput", syscall.O_WRONLY|syscall.O_NONBLOCK, 0660)
 	if err != nil {
-		logger.Errorf("create u_input touch_screen error:%v", err)
+		logger.Errorf("create u_input controller error:%v", err)
 		return nil
 	} else {
 		ioctl(deviceFile.Fd(), UISETEVBIT(), uintptr(evdev.EventSync))

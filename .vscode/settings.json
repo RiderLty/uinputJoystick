@@ -4,6 +4,7 @@
         "Debugf",
         "DPAD",
         "evdev",
+        "hetao",
         "Infof",
         "lunixbochs",
         "PAGEUP",

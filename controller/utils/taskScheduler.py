@@ -65,7 +65,7 @@ class taskScheduler ():
 
 
 class scheduled():
-    def __init__(self, controller: _controller) -> None:
+    def __init__(self, controller: _controller , DEBUG = False) -> None:
         '''创建一个scheduled的controller
         
         使其具有可以随时中断并取消后续动作的特性
@@ -76,34 +76,46 @@ class scheduled():
     '''
         self.controller = controller
         self.scheduler = taskScheduler()
+        self.DEBUG = DEBUG
 
     def interrupt(self,):
         '''中断当前指令序列
         
         释放全部按键 摇杆恢复初始状态'''
+        self.DEBUG and print("[DEBUG]:正在中断当前序列")
         self.scheduler.interrupt()
         self.controller.releaseAll()
+        self.DEBUG and print("[DEBUG]:当前序列已中断")
+        
     
     def wait(self,):
         '''等待当前提交的指令执行完毕'''
-        return self.scheduler.wait()
+        self.DEBUG and print("[DEBUG]:等待当前队列指令执行中")
+        self.scheduler.wait()
+        self.DEBUG and print("[DEBUG]:队列指令执行完毕")
+        
     
     def stop(self,):
         '''结束运行
-        
         应当仅在程序结束运行时调用'''
-        return self.scheduler.stop()
+        self.DEBUG and print("[DEBUG]:正在停止")
+        self.scheduler.stop()
+        self.DEBUG and print("[DEBUG]:程序已停止")
+    
     
     def sleep(self,ms):
         '''等待 (ms)'''
+        self.DEBUG and print(f"[DEBUG]:等待{ms}ms")
         return self.scheduler.sleep(ms=ms)
 
     def press(self, code) -> None:
         '''按下按键'''
+        self.DEBUG and print(f"[DEBUG]:按下{code.name}")
         return self.scheduler(self.controller.press)(code)
 
     def release(self, code) -> None:
         '''释放按键'''
+        self.DEBUG and print(f"[DEBUG]:释放{code.name}")
         return self.scheduler(self.controller.release)(code)
 
     def click(self, code, ms=50) -> None:
@@ -114,24 +126,30 @@ class scheduled():
 
     def mouseMove(self, x, y) -> None:
         '''鼠标移动 相对量'''
+        self.DEBUG and print(f"[DEBUG]:鼠标移动({x},{y})")
         return self.scheduler(self.controller.mouseMove)(x, y)
 
     def mouseWheel(self, value) -> None:
         '''鼠标滚轮'''
+        self.DEBUG and print(f"[DEBUG]:鼠标滚轮({value})")
         return self.scheduler(self.controller.mouseWheel)(value)
 
     def setLS(self, x=None, y=None) -> None:  # 浮点类型
         '''左摇杆xy (-1 ~ 1)'''
+        self.DEBUG and print(f"[DEBUG]:手柄左摇杆({x},{y})")
         return self.scheduler(self.controller.setLS)(x,y)
 
     def setRS(self, x, y) -> None:
         '''右摇杆xy (-1 ~ 1)'''
+        self.DEBUG and print(f"[DEBUG]:手柄右摇杆({x},{y})")
         return self.scheduler(self.controller.setRS)(x,y)
 
     def setLT(self, value) -> None:
         '''左扳机 (0 ~ 1)'''
+        self.DEBUG and print(f"[DEBUG]:手柄左扳机({value})")
         return self.scheduler(self.controller.setLT)(value)
 
     def setRT(self, value) -> None:
         '''右扳机 (0 ~ 1)'''
+        self.DEBUG and print(f"[DEBUG]:手柄右扳机({value})")
         return self.scheduler(self.controller.setRT)(value)
