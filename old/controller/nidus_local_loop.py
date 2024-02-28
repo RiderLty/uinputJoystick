@@ -70,6 +70,7 @@ KEY_D = 68
 KEY_N = 78
 KEY_J = 74
 KEY_ESC = 0x1b
+KEY_1 = 49
 KEY_2 = 50
 KEY_L = 76
 
@@ -199,14 +200,17 @@ def mainLoop(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
         clickKey(KEY_L)  # 女魔发射
         sleep(800)
         panZX4()  # 四发盘子
-        clickKey(KEY_4, 50)  # 4技能
-        sleep(1100)
         releaseKey(KEY_S)
         releaseKey(KEY_A)
 
+        clickKey(KEY_3, 50)  # 2技能
+        sleep(250)
+        
+        clickKey(KEY_4, 50)  # 4技能
+        
         if runningFlag.get_value() == False:
             break
-        sleep(500)
+        sleep(800)
         if runningFlag.get_value() == False:
             break
 
@@ -217,16 +221,17 @@ def mainLoop(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
 
         if runningFlag.get_value() == False:
             break
-        sleep(1000)
+        sleep(1100)
         if runningFlag.get_value() == False:
             break
-
-        clickKey(KEY_2, 50)  # 2技能
-        if runningFlag.get_value() == False:
-            break
-        sleep(800)
-        if runningFlag.get_value() == False:
-            break
+        
+        clickKey(KEY_2, 50) 
+        sleep(500)
+        
+        for _ in range(15):
+            clickKey(KEY_1, 10)  
+            sleep(100)
+        sleep(500)
         pressKey(KEY_S)
         pressKey(KEY_D)
         clickKey(KEY_LEFT_SHIFT, 50)  # 向右后翻滚
