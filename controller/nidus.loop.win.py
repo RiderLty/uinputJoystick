@@ -3,11 +3,11 @@ from time import sleep as s_sleep
 from time import sleep
 import threading
 from bottle import *
-from utils.ocrTool import ocrTool
 from utils.screenCap import screenCap
 from utils.taskScheduler import scheduled
 from utils.interface.winController import *
-
+import datetime
+from cnocr import CnOcr
 # README
 #
 # 先安装依赖：
@@ -48,7 +48,7 @@ def sleep(ms):
 
 ctr = scheduled(controller=controller())
 
-    
+
 def openHT():  # 开核桃 使用方向键导航 ，先到坐上然后用手柄确认
     for _ in range(10):
         ctr.click(BTN.BTN_DPAD_LEFT)
@@ -68,9 +68,9 @@ def openHT():  # 开核桃 使用方向键导航 ，先到坐上然后用手柄�
     ctr.sleep(100)
     ctr.click(BTN.BTN_DPAD_RIGHT)
     ctr.sleep(100)
-    ctr.click(BTN.BTN_A,10)
-    ctr.sleep(300)
-    ctr.click(BTN.BTN_A,10)
+    for i in range(10):
+        ctr.click(BTN.BTN_A, 50)
+        ctr.sleep(50)
     ctr.wait()
 
 
@@ -92,9 +92,9 @@ def nvidiaVideoSave():  # 快捷键  英伟达的即时重放 没有就注释掉
 
 
 def panZ(time):  # 扔盘子 + 引爆
-    ctr.click(BTN.BTN_B,time)
+    ctr.click(BTN.BTN_B, time)
     ctr.sleep(100)
-    ctr.click(BTN.BTN_RS,50)
+    ctr.click(BTN.BTN_RS, 50)
 
 
 def panZX4():  # 耗时 3.95
@@ -106,7 +106,8 @@ def panZX4():  # 耗时 3.95
 
 
 def skill(num):
-    skillList = [BTN.BTN_A, BTN.BTN_A, BTN.BTN_X, BTN.BTN_B, BTN.BTN_Y, BTN.BTN_LB]
+    skillList = [BTN.BTN_A, BTN.BTN_A, BTN.BTN_X,
+                 BTN.BTN_B, BTN.BTN_Y, BTN.BTN_LB]
     ctr.press(BTN.BTN_RB)
     ctr.sleep(50)
     ctr.click(skillList[num])
@@ -118,56 +119,61 @@ def mainLoop(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
     runningFlag.set_value(True)
     stopFlag.set_value(False)
     while runningFlag.get_value() == True:
-        ctr.setLS(-1,-1) #左后方走
-        ctr.setRT(1)#女魔发射
-        ctr.sleep(50)
-        ctr.setRT(0)
+        ctr.setLS(-1, -1)  # 左后方走
+        # ctr.setRT(1)  # 女魔发射
+        # ctr.sleep(50)
+        # ctr.setRT(0)
+        ctr.click(BTN.BTN_DPAD_RIGHT)
+        skill(3) #MAG 吸
         ctr.sleep(800)
         panZX4()  # 四发盘子
-        ctr.setRT(1)#女魔发射
-        ctr.sleep(50)
-        ctr.setRT(0)
+        # ctr.setRT(1)#女魔发射
+        # ctr.sleep(50)
+        # ctr.setRT(0)
+        ctr.click(BTN.BTN_DPAD_RIGHT)
+        skill(3)
         ctr.sleep(800)
         panZX4()  # 四发盘子
-        skill(4) #4技能
-        ctr.sleep(1100)
-        ctr.setLS(0,0) 
-        ctr.sleep(500)
         
-        ctr.setLS(0,1) #向前
+        ctr.setLS(0, 0)
+        skill(4)  # 4技能
+        ctr.sleep(1100)
+        ctr.setLS(0, 1)  # 向前
         ctr.sleep(50)
         ctr.click(BTN.BTN_LB)  # 向前翻滚
-        ctr.setLS(0,0)
-        
+        ctr.setLS(0, 0)
+
         ctr.sleep(1000)
         skill(2)  # 2技能
         ctr.sleep(800)
-        
-        ctr.setLS(1,-1) 
+
+        ctr.setLS(1, -1)
         ctr.sleep(50)
-        ctr.click(BTN.BTN_LB,100)  # 向右后翻滚
-        ctr.setLS(0,-1) 
+        ctr.click(BTN.BTN_LB, 100)  # 向右后翻滚
+        ctr.setLS(0, -1)
         ctr.sleep(1000)
-        ctr.click(BTN.BTN_A) # 跳跃
+        ctr.click(BTN.BTN_A)  # 跳跃
         ctr.sleep(200)
-        ctr.setLT(1)
-        ctr.sleep(200)
-        ctr.setLT(0) # 瞄准触发蜘蛛赋能
-        ctr.setLS(0,0) 
+        # ctr.setLT(1)
+        # ctr.sleep(200)
+        # ctr.setLT(0) # 瞄准触发蜘蛛赋能
+        ctr.click(BTN.BTN_DPAD_LEFT, 200)
+        ctr.setLS(0, 0)
         ctr.sleep(300)
         ctr.wait()
     stopFlag.set_value(True)
     print("控制线程已退出")
 
-
+cnocrInstance = CnOcr()
 def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
-    getScreen = screenCap()
-    getOcrResult = ocrTool()
-    while runningFlag.get_value() == True:
+    print("观察者线程已启动")
+    global cnocrInstance
+    while True:
         try:
-            sc_img = getScreen()
-            allText , out = getOcrResult(sc_img)
-            print("\n============================================\n",allText)
+            sc_img = screenCap()
+            out = cnocrInstance.ocr(sc_img)
+            allText = "|".join([x["text"] for x in out]).strip()
+            print(datetime.datetime.now())
             # =======================================================================================
             # 检测氧气耗尽或者死亡
             detectedFlag = False
@@ -177,7 +183,7 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
                     ensureCount += 1
                     print(f"检测到停止关键词{ensureCount}次")
                     if ensureCount >= 3:
-                        print("已停止!!!")
+                        print("观察者线程已停止!!!")
                         runningFlag.set_value(False)
                         ctr.interrupt()
                         ctr.click(BTN.BTN_START)
@@ -188,6 +194,14 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
             if detectedFlag == False:
                 ensureCount = 0
             # =======================================================================================
+            if runningFlag.get_value() == True:# 仅执行一次
+                for x in ["报酬", "无尽加成", "已经打开的"]:
+                    if x in allText:
+                        print("结算了，现在停止等核桃")
+                        runningFlag.set_value(False)
+                        ctr.interrupt()
+                        break
+            # =======================================================================================
             # 检测遗物并执行开启
             for x in ["选择遗物", "装备以执行任务", ]:
                 if x in allText:
@@ -195,7 +209,7 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
                     selectHeTao(runningFlag, stopFlag)
                     break
             # =======================================================================================
-            sleep(1000)
+            sleep(2000)
         except Exception as e:
             print(e)
             pass
@@ -203,16 +217,17 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
 
 @route("/jmp", method="GET")
 def jmp():
-    ctr.setLS(0,1)
+    ctr.setLS(0, 1)
     ctr.sleep(10)
     ctr.click(BTN.BTN_A)
     ctr.sleep(10)
     ctr.click(BTN.BTN_LB)
     ctr.sleep(5)
-    ctr.click(BTN.BTN_A,30)
+    ctr.click(BTN.BTN_A, 30)
     ctr.sleep(500)
-    ctr.setLS(0,0)
+    ctr.setLS(0, 0)
     ctr.wait()
+
 
 @route("/start")
 def start():
@@ -224,7 +239,9 @@ def start():
     ctr.click(BTN.BTN_START)
     ctr.sleep(1000)
     ctr.wait()
-    threading.Thread(target=watcher, args=(runningFlag, stopFlag)).start()
+    runningFlag.set_value(True)
+    stopFlag.set_value(False)
+    
     threading.Thread(target=mainLoop, args=(runningFlag, stopFlag)).start()
 
 
@@ -234,23 +251,20 @@ def stop():
     ctr.interrupt()
     ctr.click(BTN.BTN_START)
     ctr.wait()
-    
 
 
-@route("/test")#测试函数放在这里运行
+@route("/test")  # 测试函数放在这里运行
 def test():
-    ctr.setRS(0,1)
+    ctr.setRS(0, 1)
     ctr.sleep(300)
-    ctr.setLS(0,0)
+    ctr.setLS(0, 0)
     ctr.wait()
-    
 
 
 @route("/screen")
 def screen():
     try:
-        getScreen = screenCap()
-        img = getScreen()
+        img = screenCap()
         img_byte_arr = io.BytesIO()
         # img = img.resize((1280, 720))
         save_options = {
@@ -264,7 +278,7 @@ def screen():
         # print("finish in ",time.time() - start)
         return img_byte_arr
     except Exception as e:
-        
+
         return str(e)
 
 
@@ -329,7 +343,7 @@ def index():
 
 def server():
     run(
-        host="0.0.0.0", port=4443, reloader=False, server="paste"
+        host="0.0.0.0", port=4443, reloader=False, server="paste",quiet=True
     )
 
 
@@ -337,5 +351,5 @@ runningFlag = ThreadSafeValue(False)  # 表示正在运行
 stopFlag = ThreadSafeValue(True)  # 表示已经停止
 
 if __name__ == "__main__":
+    threading.Thread(target=watcher, args=(runningFlag, stopFlag)).start()
     threading.Thread(target=server).start()
-    

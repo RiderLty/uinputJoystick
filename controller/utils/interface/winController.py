@@ -26,11 +26,14 @@ class controller(_controller):
         self.releaseAll()
     
     def releaseAll(self,) -> None:
-        self.v360.reset()
         self.LS_X = 0
         self.LS_Y = 0
         self.RS_X = 0
         self.RS_Y = 0
+        self.setLS(0,0)
+        self.setRS(0,0)
+        self.setRT(0)
+        self.setLT(0)
         for k in [x for x in self.downingKeys]:
             self.release(k)
 

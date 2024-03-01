@@ -13,7 +13,7 @@ import vgamepad as vg
 from vgamepad import XUSB_BUTTON
 from bottle import *
 from PIL import Image
-
+import requests
 # README
 #
 # 先安装依赖：
@@ -168,6 +168,9 @@ def nvidiaVideoSave():  # 快捷键  英伟达的即时重放 没有就注释掉
     releaseKey(18)
     return
 
+def notify():
+    requests.get(f"https://trigger.macrodroid.com/87782f44-7a7b-418d-a23a-4702ddc28783/drlintriger-jv55u5hb6b?tag=important&text={'寄了'}&title={'AutoBot通知'}")
+
 
 def panZ(time):  # 扔盘子 + 引爆
     clickKey(KEY_E, time)
@@ -275,6 +278,7 @@ def watcher(runningFlag: ThreadSafeValue, stopFlag: ThreadSafeValue):
                             runningFlag.set_value(False)
                             clickKey(KEY_ESC)
                             nvidiaVideoSave()  # 非正常
+                            notify()
                             return
                         continue
                 if detectedFlag == False:
