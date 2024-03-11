@@ -204,10 +204,14 @@ func create_u_input_controller() *os.File {
 }
 func main() {
 	joystick_deviceFile := create_u_input_controller()
-	mouse_kb_deviceFile := create_u_input_mouse_keyboard()
 	if joystick_deviceFile == nil {
 		return
 	}
+	mouse_kb_deviceFile := nil
+	if true {
+		mouse_kb_deviceFile = create_u_input_mouse_keyboard()
+	}
+	
 	logger.Info("已创建虚拟手柄 Xbox Wireless Controller(uinput)")
 	ev_sync := evdev.Event{Type: 0, Code: 0, Value: 0}
 
@@ -252,9 +256,9 @@ func main() {
 				write_events = append(write_events, event)
 				write_events = append(write_events, &ev_sync)
 				if event.Type == evdev.EventAbsolute || (event.Type == evdev.EventKey && event.Code >= uint16(evdev.BtnA) && event.Code <= uint16(evdev.BtnThumbR)) {
-					sendEvents(joystick_deviceFile, write_events)
+					joystick_deviceFile != nil && sendEvents(joystick_deviceFile, write_events)
 				} else {
-					sendEvents(mouse_kb_deviceFile, write_events)
+					mouse_kb_deviceFile != nil && sendEvents(mouse_kb_deviceFile, write_events)
 				}
 			}
 		}
