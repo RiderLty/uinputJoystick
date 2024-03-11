@@ -1,4 +1,3 @@
-import ctypes
 import socket
 import struct
 from ._controller import _controller

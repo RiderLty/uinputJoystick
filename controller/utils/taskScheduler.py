@@ -61,7 +61,8 @@ class taskScheduler ():
         self.interruptFlag = False
 
     def wait(self):
-        self.taskQueue.join()
+        if not self.taskQueue.empty():
+            self.taskQueue.join()
 
 
 class scheduled():
