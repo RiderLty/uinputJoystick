@@ -39,7 +39,7 @@ def autoSelectHT():
         ctr.sleep(500)
         ctr.wait()
         screen = screenCapNP()
-        cv2.imwrite(rf"P:\{rightCount}.jpg" ,screen )
+        # cv2.imwrite(rf"P:\{rightCount}.jpg" ,screen )
         ocrResult = ocrInstance.ocr(screen)
         allText = "#".join([x["text"].strip() for x in ocrResult]).strip()
         rightCount += 1
