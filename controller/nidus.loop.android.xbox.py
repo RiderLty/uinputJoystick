@@ -4,7 +4,6 @@ from time import sleep
 import threading
 from bottle import *
 import requests
-# from utils.ocrTool import ocrTool
 # from utils.screenCap import screenCap
 from utils.taskScheduler import scheduled
 # from utils.interface.winController import *

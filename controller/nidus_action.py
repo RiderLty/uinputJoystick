@@ -91,7 +91,7 @@ class actions():
         self.ctr.setLS(0, 0)
         self.ctr.sleep(1000)
         self.skill(2)  # 2技能
-        for _ in range(15):
+        for _ in range(10):
             self.skill(1)
             self.ctr.sleep(100)
         self.ctr.sleep(600)

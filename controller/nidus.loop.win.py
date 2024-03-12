@@ -3,14 +3,16 @@ from time import sleep as s_sleep
 from time import sleep
 import threading
 from bottle import *
-from utils.screenCap import screenCap
+import cv2
+import numpy as np
+from utils.imgTools import np2pil, screenCapPIL, screenCapNP, handelScreen
 from utils.taskScheduler import scheduled
 from utils.interface.winController import *
 import datetime
 from cnocr import CnOcr
-
+from cnocr.utils import draw_ocr_results
 from nidus_action import *
-
+from PIL import Image
 
 # README
 #
@@ -18,18 +20,47 @@ from nidus_action import *
 # pip install pywin32 cnocr[ort-cpu] mss vgamepad bottle paste Pillow
 #
 # windows分辨率 1920x1080 缩放100%
-# 推荐游戏内 UI 200%
-#
-# 改键
-# 跳跃N
-# 开火L
-# 瞄准J
-# 重击U
+# 游戏内 HUD尺寸 200%
+# 关闭：辅助瞄准 动态HUD 屏幕晃动
+# 手柄改键：方向左瞄准，方向右射击
 #
 # 手机浏览器访问  http://[电脑IP]:4443
 # 准备工作做好后，ESC暂停，然后网页端点击开始
 
 # XBOX挂机的时候记得关闭辅助瞄准
+
+
+class imgFac():
+    def __init__(self) -> None:
+        self.screen = None
+        self.inRangeScreen = None
+
+    def setScreen(self, recapture=True):
+        '获取原始屏幕'
+        if recapture == True or self.screen == None:
+            screen = screenCapNP()
+            self.screen = screen
+            return screen
+        else:
+            return self.screen
+
+    def getInRangeScreen(self, recapture=True):
+        '获取在指定范围内的屏幕的灰度图像'
+        if recapture == True or self.inRangeScreen == None:
+            inRangeScreen = handelScreen(self.setScreen(True))
+            self.inRangeScreen = inRangeScreen
+            return inRangeScreen
+        else:
+            return self.inRangeScreen
+
+    def getOCRResult(self, recapture=False):
+        '获取OCR结果图像'
+        pass
+
+    def setOCRout(self, out):
+        '记录OCR结果'
+        pass
+
 
 class ThreadSafeValue:
     def __init__(self, value):
@@ -73,8 +104,8 @@ def mainLoop(mainLoopPaused: ThreadSafeValue):
             print("主循环已暂停")
             mainLoopPaused.waitFor(False)
             print("主循环已启动")
-        # nidus.mainLoopOnceWait_with_backRight()
-        nidus.mainLoopOnceWait_juts_run()
+        nidus.mainLoopOnceWait_with_backRight()
+        # nidus.mainLoopOnceWait_juts_run()
 
 
 def watcher(watchPaused: ThreadSafeValue, mainLoopPaused: ThreadSafeValue):  # 是否检测 false则暂停检测
@@ -86,10 +117,13 @@ def watcher(watchPaused: ThreadSafeValue, mainLoopPaused: ThreadSafeValue):  # �
             watchPaused.waitFor(False)
             print("观察者已启动")
         try:
-            sc_img = screenCap()
+            sc_img = handelScreen(screenCapNP())
+            # sc_img =  screenCapNP()
             out = cnocrInstance.ocr(sc_img)
-            allText = "|".join([x["text"] for x in out]).strip()
-            print(datetime.datetime.now())
+            # draw_ocr_results(sc_img, out, r"P:\out.png", r"C:\Users\lty65\AppData\Local\Microsoft\Windows\Fonts\仿宋_GB2312.ttf")
+            allText = "|".join(
+                [f'{x["text"]}({x["score"]})'for x in out]).strip()
+            print(datetime.datetime.now(), allText)
             # =======================================================================================
             # 检测氧气耗尽或者死亡
             detectedFlag = False
@@ -167,21 +201,38 @@ def test():
     ctr.wait()
 
 
-@route("/screen")
+@route("/screenmask")
 def screen():
     try:
-        img = screenCap()
-        img_byte_arr = io.BytesIO()
-        # img = img.resize((1280, 720))
+        img = handelScreen(screenCapNP())
+        img = np2pil(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))  # mask是灰度图像
         save_options = {
             'format': 'JPEG',
             'quality': 72  # 设置图片质量，范围为0-100
         }
+        img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, **save_options)
         img_byte_arr = img_byte_arr.getvalue()
         response.headers['Content-Type'] = 'image/jpg'
         response.headers['Content-Length'] = len(img_byte_arr)
-        # print("finish in ",time.time() - start)
+        return img_byte_arr
+    except Exception as e:
+        return str(e)
+
+
+@route("/screen")
+def screen():
+    try:
+        img = screenCapPIL()
+        save_options = {
+            'format': 'JPEG',
+            'quality': 72  # 设置图片质量，范围为0-100
+        }
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, **save_options)
+        img_byte_arr = img_byte_arr.getvalue()
+        response.headers['Content-Type'] = 'image/jpg'
+        response.headers['Content-Length'] = len(img_byte_arr)
         return img_byte_arr
     except Exception as e:
         return str(e)
@@ -252,5 +303,19 @@ def server():
 
 if __name__ == "__main__":
     threading.Thread(target=mainLoop, args=(mainLoopPaused,)).start()
-    threading.Thread(target=watcher, args=(watchPaused,  mainLoopPaused,)).start()
+    threading.Thread(target=watcher, args=(
+        watchPaused,  mainLoopPaused,)).start()
     threading.Thread(target=server).start()
+
+    # print("helllo")
+    # # img = cv2.imread(r"D:\Pictures\Screenshots\warframe\SC (16).png")
+    # img = screenCapNP()
+
+    # img = handelScreen(img)
+
+    # cv2.imshow('Filtered Image', img)
+
+    # while True:
+    #     if cv2.waitKey(1) == 27:
+    #         break
+    # cv2.destroyAllWindows()
