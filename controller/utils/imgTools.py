@@ -6,7 +6,6 @@ import requests
 from PIL import Image
 from cnocr.ppocr.utility import draw_ocr_box_txt
 
-
 def url2ImgNp(url):
     '''从URL下载图片，返回np格式的BGR图像'''
     response = requests.get(url)
@@ -81,6 +80,10 @@ masks = [
     # # 报酬 （核桃开了  & 选择遗物
     [(16, 33), (83, 170), (118, 243)],
     [(246, 3), (742, 171)],
+    
+    # 遗物金币
+    [(63,117),(0,30),(158,255)],
+    [(324,448), (1678,971)] #矩形范围先放大一点
 ]
 
 
@@ -104,13 +107,17 @@ def handelScreen(screen):
 
 
 if __name__ == "__main__":
-    pass
+    from cnocr import CnOcr
+    oi = CnOcr()
     while True:
-        img = url2ImgNp("http://192.168.3.155:4443/screen")
+        img = url2ImgNp("http://192.168.3.155:4443/screenraw")
         img = handelScreen(img)
-        img = np2pil(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
-        img.show()
-        # cv2.imshow('Mask', img)
+        result = oi.ocr(img)
+        rawDraw, whiteDraw = drawOCR2np(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) , result ,  r"NotoSansSC-Regular.otf")
+        cv2.imshow('rawDraw', rawDraw)
+        cv2.imshow('whiteDraw', whiteDraw)
+        
+        
         # url2ImgPIL("http://192.168.3.155:4443/screen").show()
         # img = url2ImgNp("http://192.168.3.155:4443/screen")
         # cv2.imshow('Mask', handelScreen(img))

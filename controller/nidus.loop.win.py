@@ -30,38 +30,6 @@ from PIL import Image
 # XBOX挂机的时候记得关闭辅助瞄准
 
 
-class imgFac():
-    def __init__(self) -> None:
-        self.screen = None
-        self.inRangeScreen = None
-
-    def setScreen(self, recapture=True):
-        '获取原始屏幕'
-        if recapture == True or self.screen == None:
-            screen = screenCapNP()
-            self.screen = screen
-            return screen
-        else:
-            return self.screen
-
-    def getInRangeScreen(self, recapture=True):
-        '获取在指定范围内的屏幕的灰度图像'
-        if recapture == True or self.inRangeScreen == None:
-            inRangeScreen = handelScreen(self.setScreen(True))
-            self.inRangeScreen = inRangeScreen
-            return inRangeScreen
-        else:
-            return self.inRangeScreen
-
-    def getOCRResult(self, recapture=False):
-        '获取OCR结果图像'
-        pass
-
-    def setOCRout(self, out):
-        '记录OCR结果'
-        pass
-
-
 class ThreadSafeValue:
     def __init__(self, value):
         self._value = value
@@ -118,9 +86,7 @@ def watcher(watchPaused: ThreadSafeValue, mainLoopPaused: ThreadSafeValue):  # �
             print("观察者已启动")
         try:
             sc_img = handelScreen(screenCapNP())
-            # sc_img =  screenCapNP()
             out = cnocrInstance.ocr(sc_img)
-            # draw_ocr_results(sc_img, out, r"P:\out.png", r"C:\Users\lty65\AppData\Local\Microsoft\Windows\Fonts\仿宋_GB2312.ttf")
             allText = "|".join(
                 [f'{x["text"]}({x["score"]})'for x in out]).strip()
             print(datetime.datetime.now(), allText)
@@ -227,6 +193,23 @@ def screen():
         save_options = {
             'format': 'JPEG',
             'quality': 72  # 设置图片质量，范围为0-100
+        }
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, **save_options)
+        img_byte_arr = img_byte_arr.getvalue()
+        response.headers['Content-Type'] = 'image/jpg'
+        response.headers['Content-Length'] = len(img_byte_arr)
+        return img_byte_arr
+    except Exception as e:
+        return str(e)
+    
+@route("/screenraw")
+def screen():
+    try:
+        img = screenCapPIL()
+        save_options = {
+            'format': 'JPEG',
+            'quality': 100  # 设置图片质量，范围为0-100
         }
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, **save_options)

@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-PATH = r"D:\Pictures\Screenshots\warframe\SC (6).png"
+PATH = r"P:\screenraw.JPG"
 
 drawing = False  # 是否正在绘制矩形
 x1, y1 = -1, -1  # 矩形左上角坐标
