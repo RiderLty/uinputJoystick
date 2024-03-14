@@ -55,21 +55,24 @@ def screenCapNP():
     with mss.mss() as m:
         rect = (0, 0, 1920, 1080)
         sc_img = m.grab(rect)
-        result = np.frombuffer(sc_img.bgra, dtype=np.uint8)
-        width = sc_img.size.width  # 宽度
-        height = sc_img.size.height  # 高度
-        result = cv2.cvtColor(result.reshape(
-            (height, width, 4)), cv2.COLOR_BGRA2BGR)
-        return result
+        npImg = np.array(sc_img)
+        npImg = cv2.cvtColor(npImg, cv2.COLOR_BGRA2BGR)
+        return npImg
+        # result = np.frombuffer(sc_img.bgra, dtype=np.uint8)
+        # width = sc_img.size.width  # 宽度
+        # height = sc_img.size.height  # 高度
+        # result = cv2.cvtColor(result.reshape(
+        #     (height, width, 4)), cv2.COLOR_BGRA2BGR)
+        # return result
 
 
 def pil2np(PILImg: Image):
-    npImg = np.array(PILImg)[..., ::-1]
+    npImg = np.array(PILImg)
     return npImg
 
 
 def np2pil(npImg: np.ndarray):
-    pilImg = Image.fromarray(npImg[..., ::-1])
+    pilImg = Image.fromarray(npImg)
     return pilImg
 
 
@@ -85,11 +88,12 @@ def drawOCR2np(rawImg, ocrResult, font_path , asOne = False):
         scores.append(_out['score'])
         boxesInt.append(_out['position'].astype(np.int64))
         boxes.append(_out['position'])
-    draw_img = draw_ocr_box_txt(
-        np2pil(rawImg), boxes, txts, scores, drop_score=0.0, font_path=font_path
-    )
+    pilRaw = np2pil(rawImg)
+    pilRaw.show()
+    draw_img = draw_ocr_box_txt( pilRaw , boxes, txts, scores, drop_score=0.0, font_path=font_path)
+    
     drawImg = cv2.cvtColor(draw_img, cv2.COLOR_RGB2BGR)
-    width = rawImg.shape[1]
+    width = pilRaw.width
     rawDraw = drawImg[:, :width]
     whiteDraw = drawImg[:, width:]
     if asOne == False:
@@ -97,6 +101,7 @@ def drawOCR2np(rawImg, ocrResult, font_path , asOne = False):
     else:
         cv2.fillPoly(rawDraw, boxesInt, (255, 255, 255))
         return np.where(whiteDraw == [255,255,255] , rawDraw  , whiteDraw)
+    
 masks = [
     # 来复活
     [(0, 0), (0, 0), (134, 255)],
@@ -158,6 +163,7 @@ if __name__ == "__main__":
     oi = CnOcr()
     while True:
         img = url2ImgNp("http://192.168.3.155:4443/screenraw")
+        # img = screenCapNP()
         img = drawHandelScreen(img)
         out = oi.ocr(img)
         a  = drawOCR2np(img , out , r"C:\Windows\Fonts\msyhl.ttc", True )
