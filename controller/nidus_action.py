@@ -11,29 +11,26 @@ class actions():
         self.ctr = ctr
         self.mainCount = 0
 
+    def clusterReset(self):
+        '''移动光标到左上角头像为止,完成后返回'''
+        for _ in range(255):
+            self.ctr.mouseMove(-127, -127)
+            self.ctr.sleep(1)
+        self.ctr.click(BTN.BTN_DPAD_RIGHT)
+        self.ctr.sleep(200)
+        self.ctr.wait()
+
     def openHT(self,):  # 开核桃 使用方向键导航 ，先到坐上然后用手柄确认
         '''使用方向键导航到左上角，然后选择第一个核桃，完成后返回'''
-        self.ctr.interrupt()
-        self.ctr.wait()
-        for _ in range(10):
-            self.ctr.click(BTN.BTN_DPAD_LEFT)
-            self.ctr.sleep(70)
-        for _ in range(5):
-            self.ctr.click(BTN.BTN_DPAD_UP)
-            self.ctr.sleep(70)
-        for _ in range(3):
-            self.ctr.click(BTN.BTN_DPAD_LEFT)
-            self.ctr.sleep(70)
-        for _ in range(3):
-            self.ctr.click(BTN.BTN_DPAD_UP)
-            self.ctr.sleep(70)
+        
+        self.clusterReset()
         self.ctr.click(BTN.BTN_DPAD_RIGHT)
         self.ctr.sleep(100)
         self.ctr.click(BTN.BTN_DPAD_DOWN)
         self.ctr.sleep(100)
         self.ctr.click(BTN.BTN_DPAD_RIGHT)
         self.ctr.sleep(100)
-        for _ in range(10):
+        for _ in range(6):
             self.ctr.click(BTN.BTN_A, 50)
             self.ctr.sleep(50)
         self.ctr.wait()
@@ -111,10 +108,10 @@ class actions():
 
         self.ctr.setLS(0, 1)  # 向前翻滚
         self.ctr.sleep(50)
-        self.ctr.click(BTN.BTN_LB) 
+        self.ctr.click(BTN.BTN_LB)
         self.ctr.setLS(0, 0)
         self.ctr.sleep(1000)
-        
+
         self.ctr.setLS(1, -1)
         self.ctr.sleep(50)
         self.ctr.click(BTN.BTN_LB, 100)  # 向右后翻滚
@@ -124,7 +121,7 @@ class actions():
         self.ctr.sleep(200)
         self.ctr.click(BTN.BTN_DPAD_LEFT, 200)  # 瞄准触发蜘蛛赋能
         self.ctr.setLS(0, 0)
-        
+
         self.ctr.setLS(-1, -1)  #
         self.ctr.sleep(50)
         self.ctr.click(BTN.BTN_LB)
@@ -133,9 +130,23 @@ class actions():
         self.ctr.sleep(2000)
         self.ctr.setLS(0, 0)
         self.ctr.release(BTN.BTN_DPAD_RIGHT)
-        
-        for _ in range(2*3):  # 循环 开启时候执行一次，随后按住左键
+
+        for _ in range(2*20):  # 循环 开启时候执行一次，随后按住左键
             self.ctr.press(BTN.BTN_DPAD_RIGHT)
             self.ctr.sleep(500)
             self.ctr.release(BTN.BTN_DPAD_RIGHT)
+        self.ctr.wait()
+
+    def mainLoop_shoot_and_move(self):
+        self.ctr.setLS(0,-1)
+        self.ctr.sleep(2000)
+        self.ctr.setLS(0,1)
+        self.ctr.sleep(3000)
+        self.ctr.setLS(0,0)
+       
+        for _ in range(2*30):  # 循环 开启时候执行一次，随后按住左键
+            self.ctr.press(BTN.BTN_DPAD_RIGHT)
+            self.ctr.sleep(500)
+            self.ctr.release(BTN.BTN_DPAD_RIGHT)
+            self.ctr.sleep(10)
         self.ctr.wait()

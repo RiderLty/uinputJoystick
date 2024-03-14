@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-PATH = r"P:\screenraw.JPG"
+PATH = r"P:\4.jpg"
 
 drawing = False  # 是否正在绘制矩形
 x1, y1 = -1, -1  # 矩形左上角坐标

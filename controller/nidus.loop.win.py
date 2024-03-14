@@ -5,7 +5,7 @@ import threading
 from bottle import *
 import cv2
 import numpy as np
-from utils.imgTools import np2pil, screenCapPIL, screenCapNP, handelScreen
+from utils.imgTools import drawHandelScreen, drawOCR2np, np2pil, screenCapPIL, screenCapNP, handelScreen
 from utils.taskScheduler import scheduled
 from utils.interface.winController import *
 import datetime
@@ -28,6 +28,8 @@ from PIL import Image
 # 准备工作做好后，ESC暂停，然后网页端点击开始
 
 # XBOX挂机的时候记得关闭辅助瞄准
+
+cnocrInstance = CnOcr()
 
 
 class ThreadSafeValue:
@@ -73,60 +75,105 @@ def mainLoop(mainLoopPaused: ThreadSafeValue):
             mainLoopPaused.waitFor(False)
             print("主循环已启动")
         nidus.mainLoopOnceWait_with_backRight()
-        # nidus.mainLoopOnceWait_juts_run()
+        # nidus.mainLoop_shoot_and_move()
+
+
+def remove_non_digits(text):
+    return ''.join([char for char in text if char.isdigit()])
+
+
+def autoSelectHT():
+    nidus.clusterReset()
+    maxRightCount = -1
+    maxValue = -1
+    ctr.sleep(100)
+    for i in range(8):
+        ctr.click(BTN.BTN_DPAD_RIGHT)
+        ctr.sleep(500)
+        ctr.wait()
+        screen = handelScreen(screenCapNP())
+        ocrResult = cnocrInstance.ocr(screen)
+        allText = "#".join([x["text"].strip() for x in ocrResult]).strip()
+        print(allText)
+        if "杜卡德" in allText:
+            print("检测到关键词 ")
+            value = int(remove_non_digits(
+                allText.split("杜卡德")[0].split("#")[-1]))
+            print("当前value = ", value)
+            if value >= maxValue:
+                maxRightCount = i
+                maxValue = value
+        print("\n")
+    nidus.clusterReset()
+    for _ in range(maxRightCount + 1):
+        ctr.click(BTN.BTN_DPAD_RIGHT)
+        ctr.sleep(300)
+    ctr.click(BTN.BTN_A)
+    ctr.wait()
+
+
+def checkText(template, targets):
+    for target in targets:
+        if target in template:
+            return True
+    return False
 
 
 def watcher(watchPaused: ThreadSafeValue, mainLoopPaused: ThreadSafeValue):  # 是否检测 false则暂停检测
-    cnocrInstance = CnOcr()
     ensureCount = 0
+    state = 0  # 状态机
     while True:
         if watchPaused.get_value() == True:
             print("观察者已暂停")
             watchPaused.waitFor(False)
             print("观察者已启动")
+            state = 0
         try:
             sc_img = handelScreen(screenCapNP())
             out = cnocrInstance.ocr(sc_img)
-            allText = "|".join(
-                [f'{x["text"]}({x["score"]})'for x in out]).strip()
-            print(datetime.datetime.now(), allText)
+            allText = "#".join([f'{x["text"].strip()}'for x in out]).strip()
+            print("\n", datetime.datetime.now(), allText)
+            detectedFlag = False
             # =======================================================================================
             # 检测氧气耗尽或者死亡
-            detectedFlag = False
-            for x in ["来复活", "前往撤离点"]:  # 死了 氧气没了（5分钟莲妈喊你可以撤了也会触发，所以检测连续出现三次）
-                if x in allText:
-                    detectedFlag = True
-                    ensureCount += 1
-                    print(f"检测到停止关键词{ensureCount}次")
-                    if ensureCount >= 3:
-                        watchPaused.set_value(True)
-                        mainLoopPaused.set_value(True)
-                        ctr.interrupt()
-                        ctr.click(BTN.BTN_START)
-                        ctr.wait()
-                        # nvidiaVideoSave()  # 非正常
-                    continue
+            # 死了 氧气没了（5分钟莲妈喊你可以撤了也会触发，所以检测连续出现三次）
+            if checkText(allText, ["来复活", "前往撤离点"]):
+                detectedFlag = True
+                ensureCount += 1
+                print(f"检测到停止关键词{ensureCount}次")
+                if ensureCount >= 3:
+                    watchPaused.set_value(True)
+                    mainLoopPaused.set_value(True)
+                    ctr.interrupt()
+                    ctr.click(BTN.BTN_START)
+                    ctr.wait()
+                    # nvidiaVideoSave()  # 非正常
+                    break
             if detectedFlag == False:
                 ensureCount = 0
             # =======================================================================================
-            for x in ["报酬", "无尽加成", "已经打开的"]:
-                if x in allText:
-                    mainLoopPaused.set_value(True)
-                    print("结算等核桃")
-                    ctr.interrupt()
-                    ctr.wait()
-                    break
+            if state == 0 and checkText(allText, ["报酬"]):
+                print("选奖励")
+                state = 1
+                mainLoopPaused.set_value(True)
+                ctr.interrupt()
+                ctr.wait()
+                # autoSelectHT()  # 自动选择价值最高的核桃 单人挂记得注释掉
+                break
             # =======================================================================================
             # 检测遗物并执行开启
-            for x in ["选择遗物", "装备以执行任务", ]:
-                if x in allText:
-                    print("开核桃时间!!!")
-                    mainLoopPaused.set_value(True)
-                    nidus.openHT()
-                    sleep(1000 * 5)
-                    mainLoopPaused.set_value(False)
-                    break
+            if state == 1 and checkText(allText, ["选择遗物"]):
+                print("开核桃时间!!!")
+                state = 2
+                mainLoopPaused.set_value(True)
+                ctr.interrupt()
+                ctr.wait()
+                nidus.openHT()
+                break
             # =======================================================================================
+            if state == 2 and checkText(allText, ["生存"]):
+                mainLoopPaused.set_value(False)
+                state = 0
             sleep(2000)
         except Exception as e:
             print(e)
@@ -189,7 +236,9 @@ def screen():
 @route("/screen")
 def screen():
     try:
-        img = screenCapPIL()
+        img = screenCapNP()
+        img = drawHandelScreen(img)
+        img = np2pil(img)
         save_options = {
             'format': 'JPEG',
             'quality': 72  # 设置图片质量，范围为0-100
@@ -202,7 +251,8 @@ def screen():
         return img_byte_arr
     except Exception as e:
         return str(e)
-    
+
+
 @route("/screenraw")
 def screen():
     try:
@@ -210,6 +260,29 @@ def screen():
         save_options = {
             'format': 'JPEG',
             'quality': 100  # 设置图片质量，范围为0-100
+        }
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, **save_options)
+        img_byte_arr = img_byte_arr.getvalue()
+        response.headers['Content-Type'] = 'image/jpg'
+        response.headers['Content-Length'] = len(img_byte_arr)
+        return img_byte_arr
+    except Exception as e:
+        return str(e)
+
+
+@route("/screenocr")
+def screen():
+    try:
+        screen = screenCapNP()
+        draw = drawHandelScreen(screenCapNP())
+        img = handelScreen(screen)
+        out = cnocrInstance.ocr(img)
+        rawDraw = drawOCR2np(draw, out, r"C:\Windows\Fonts\msyhl.ttc", True)
+        img = np2pil(rawDraw)
+        save_options = {
+            'format': 'JPEG',
+            'quality': 72  # 设置图片质量，范围为0-100
         }
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, **save_options)
@@ -263,7 +336,7 @@ def index():
         });
     }
     (() => {
-        setInterval( () => { document.querySelector("#img").src = `/screen?t=${Date.now()}`   } , 1000)
+        setInterval( () => { document.querySelector("#img").src = `/screenraw?t=${Date.now()}`   } , 1000)
     })()
     
   </script>
@@ -281,7 +354,7 @@ def index():
 
 
 def server():
-    run(host="0.0.0.0", port=4443, reloader=False, server="paste",)
+    run(host="0.0.0.0", port=4443, reloader=False, quiet=True)
 
 
 if __name__ == "__main__":

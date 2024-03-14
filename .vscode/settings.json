@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "argparse",
+        "astype",
         "Debugf",
         "DPAD",
         "evdev",
@@ -11,6 +12,7 @@
         "lunixbochs",
         "ored",
         "PAGEUP",
+        "polylines",
         "struc",
         "txts",
         "UIDEVCREATE",
