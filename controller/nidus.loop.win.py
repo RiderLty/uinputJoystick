@@ -5,7 +5,7 @@ import threading
 from bottle import *
 import cv2
 import numpy as np
-from utils.imgTools import drawHandelScreen, drawOCR2np, np2pil, screenCapPIL, screenCapNP, handelScreen
+from utils.imgTools import *
 from utils.taskScheduler import scheduled
 from utils.interface.winController import *
 import datetime
@@ -56,10 +56,6 @@ class ThreadSafeValue:
         return self._value
 
 
-mainLoopPaused = ThreadSafeValue(True)
-watchPaused = ThreadSafeValue(True)
-
-
 def sleep(ms):
     s_sleep(ms/1000)
 
@@ -67,12 +63,14 @@ def sleep(ms):
 ctr = scheduled(controller=controller())
 nidus = actions(ctr=ctr)
 
+fsm = ThreadSafeValue(-1)
 
-def mainLoop(mainLoopPaused: ThreadSafeValue):
+
+def mainLoop(state: ThreadSafeValue):
     while True:
-        if mainLoopPaused.get_value() == True:
+        if state.get_value() != 0:
             print("主循环已暂停")
-            mainLoopPaused.waitFor(False)
+            state.waitFor(0)
             print("主循环已启动")
         nidus.mainLoopOnceWait_with_backRight()
         # nidus.mainLoop_shoot_and_move()
@@ -91,7 +89,7 @@ def autoSelectHT():
         ctr.click(BTN.BTN_DPAD_RIGHT)
         ctr.sleep(500)
         ctr.wait()
-        screen = handelScreen(screenCapNP())
+        screen = handelScreen(mss2np())
         ocrResult = cnocrInstance.ocr(screen)
         allText = "#".join([x["text"].strip() for x in ocrResult]).strip()
         print(allText)
@@ -119,66 +117,62 @@ def checkText(template, targets):
     return False
 
 
-def watcher(watchPaused: ThreadSafeValue, mainLoopPaused: ThreadSafeValue):  # 是否检测 false则暂停检测
-    ensureCount = 0
-    state = 0  # 状态机
-    while True:
-        if watchPaused.get_value() == True:
-            print("观察者已暂停")
-            watchPaused.waitFor(False)
-            print("观察者已启动")
-            state = 0
-        try:
-            sc_img = handelScreen(screenCapNP())
-            out = cnocrInstance.ocr(sc_img)
-            allText = "#".join([f'{x["text"].strip()}'for x in out]).strip()
-            print("\n", datetime.datetime.now(), allText)
-            detectedFlag = False
-            # =======================================================================================
-            # 检测氧气耗尽或者死亡
-            # 死了 氧气没了（5分钟莲妈喊你可以撤了也会触发，所以检测连续出现三次）
-            if checkText(allText, ["来复活", "前往撤离点"]):
-                detectedFlag = True
-                ensureCount += 1
-                print(f"检测到停止关键词{ensureCount}次")
-                if ensureCount >= 3:
-                    watchPaused.set_value(True)
-                    mainLoopPaused.set_value(True)
-                    ctr.interrupt()
-                    ctr.click(BTN.BTN_START)
-                    ctr.wait()
-                    # nvidiaVideoSave()  # 非正常
-                    break
-            if detectedFlag == False:
-                ensureCount = 0
-            # =======================================================================================
-            if state == 0 and checkText(allText, ["报酬"]):
-                print("选奖励")
-                state = 1
-                mainLoopPaused.set_value(True)
-                ctr.interrupt()
-                ctr.wait()
-                # autoSelectHT()  # 自动选择价值最高的核桃 单人挂记得注释掉
-                break
-            # =======================================================================================
-            # 检测遗物并执行开启
-            if state == 1 and checkText(allText, ["选择遗物"]):
-                print("开核桃时间!!!")
-                state = 2
-                mainLoopPaused.set_value(True)
-                ctr.interrupt()
-                ctr.wait()
-                nidus.openHT()
-                break
-            # =======================================================================================
-            if state == 2 and checkText(allText, ["生存"]):
-                mainLoopPaused.set_value(False)
-                state = 0
-            sleep(2000)
-        except Exception as e:
-            print(e)
-            pass
+def watcher(state: ThreadSafeValue):
+    
+    def goto(x):
+        state.set_value(x)
+    
+    def eq(x):
+        return state.get_value() == x
 
+    def breakActions():
+        ctr.interrupt()
+        ctr.wait()
+
+    while True:
+        sc_img = handelScreen(mss2np()) # 节省资源的，不用了
+        # sc_img = mss2np()
+        out = cnocrInstance.ocr(sc_img)
+        allText = "#".join([f'{x["text"].strip()}'for x in out]).strip()
+        latestState = state.get_value()
+        if eq(-1):#停止状态
+            print("观察者已暂停")
+            state.waitFor(0)#等待0
+            print("观察者已启动")
+        elif eq(0):#多数时候的状态
+            if checkText(allText, ["来复活", "前往撤离点"]):#停止信号
+                goto(1)#再次确认
+            elif checkText(allText, ["报酬"]):#核桃开了
+                goto(3)#等待选择遗物
+                breakActions()#停止动作
+                # autoSelectHT() #单人记得注释掉
+            else:
+                pass#不执行任何动作
+        elif eq(1):
+            if checkText(allText, ["来复活", "前往撤离点"]):#停止信号
+                goto(2)#再次确认
+            else:
+                goto(0)#没了 回到主状态
+        elif eq(2):
+            if checkText(allText, ["来复活", "前往撤离点"]):#停止了
+                goto(-1)#到停止态
+                breakActions()
+                ctr.click(BTN.BTN_START)
+            else:
+                goto(0)#没了 回到主状态
+        elif eq(3):
+            if checkText(allText, ["选择遗物"]):#选择遗物了
+                goto(4) # 到等待状态
+                nidus.selectHT()
+            else:
+                pass
+        elif eq(4):
+            if checkText(allText, ["生存"]):
+                goto(0) #检测到关键词 回到主状态
+            else:
+                pass #继续等待
+        latestState != state.get_value() and print(datetime.datetime.now(),f"{latestState} => {state.get_value()}")
+        sleep(1000)
 
 @route("/jmp", method="GET")
 def jmp():
@@ -187,23 +181,22 @@ def jmp():
 
 @route("/start")
 def start():
-    print("start")
+    print("开始")
     ctr.click(BTN.BTN_LS)
     ctr.sleep(100)
     ctr.click(BTN.BTN_B)
     ctr.sleep(1000)
     ctr.wait()
-    mainLoopPaused.set_value(False)
-    watchPaused.set_value(False)
+    fsm.set_value(0)
 
 
 @route("/stop")
 def stop():
-    mainLoopPaused.set_value(True)
-    watchPaused.set_value(True)
+    print("停止")
+    fsm.set_value(-1)
     ctr.interrupt()
-    ctr.click(BTN.BTN_START)
     ctr.wait()
+    ctr.click(BTN.BTN_START)
 
 
 @route("/test")  # 测试函数放在这里运行
@@ -217,8 +210,8 @@ def test():
 @route("/screenmask")
 def screen():
     try:
-        img = handelScreen(screenCapNP())
-        img = np2pil(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))  # mask是灰度图像
+        img = handelScreen(mss2np())
+        img = np2pil(img)  # mask是灰度图像
         save_options = {
             'format': 'JPEG',
             'quality': 72  # 设置图片质量，范围为0-100
@@ -236,9 +229,8 @@ def screen():
 @route("/screen")
 def screen():
     try:
-        img = screenCapNP()
-        img = drawHandelScreen(img)
-        img = np2pil(img)
+        img = drawHandelScreen(mss2np())
+        img = np2pil(img)  # mask是灰度图像
         save_options = {
             'format': 'JPEG',
             'quality': 72  # 设置图片质量，范围为0-100
@@ -256,7 +248,7 @@ def screen():
 @route("/screenraw")
 def screen():
     try:
-        img = screenCapPIL()
+        img = mss2pil()
         save_options = {
             'format': 'JPEG',
             'quality': 100  # 设置图片质量，范围为0-100
@@ -274,8 +266,8 @@ def screen():
 @route("/screenocr")
 def screen():
     try:
-        screen = screenCapNP()
-        draw = drawHandelScreen(screenCapNP())
+        screen = mss2np()
+        draw = drawHandelScreen(mss2np())
         img = handelScreen(screen)
         out = cnocrInstance.ocr(img)
         rawDraw = drawOCR2np(draw, out, r"C:\Windows\Fonts\msyhl.ttc", True)
@@ -336,7 +328,7 @@ def index():
         });
     }
     (() => {
-        setInterval( () => { document.querySelector("#img").src = `/screenraw?t=${Date.now()}`   } , 1000)
+        setInterval( () => { document.querySelector("#img").src = `/screen?t=${Date.now()}`   } , 1000)
     })()
     
   </script>
@@ -354,18 +346,17 @@ def index():
 
 
 def server():
-    run(host="0.0.0.0", port=4443, reloader=False, quiet=True)
+    run(host="0.0.0.0", port=4443, reloader=False,   quiet=True)
 
 
 if __name__ == "__main__":
-    threading.Thread(target=mainLoop, args=(mainLoopPaused,)).start()
-    threading.Thread(target=watcher, args=(
-        watchPaused,  mainLoopPaused,)).start()
+    threading.Thread(target=mainLoop, args=(fsm,)).start()
+    threading.Thread(target=watcher, args=(fsm,)).start()
     threading.Thread(target=server).start()
 
     # print("helllo")
     # # img = cv2.imread(r"D:\Pictures\Screenshots\warframe\SC (16).png")
-    # img = screenCapNP()
+    # img = mss2np()
 
     # img = handelScreen(img)
 

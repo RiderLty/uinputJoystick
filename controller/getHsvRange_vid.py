@@ -6,39 +6,7 @@ from PIL import Image
 
 from cnocr import CnOcr
 
-from utils.imgTools import drawHandelScreen, drawOCR2np, screenCapNP, url2ImgNp
-
-
-def np2pil(npImg: np.ndarray):
-    pilImg = Image.fromarray(npImg[..., ::-1])
-    return pilImg
-
-
-def getScreenCapturer(display_num=-1, zone=[(0, 0), (1920, 1080)]):
-    '''display_num 显示器编号  1,2,3...    -1为主显示器
-
-    zone 抓取区域 [(x1,y1),(x2,y2)] 左上角到右下角
-    '''
-    assert zone[0][0] < zone[1][0]
-    assert zone[0][1] < zone[1][1]
-    sct = mss.mss()
-    mon = sct.monitors[display_num]
-    monitor = {
-        "top": mon["top"] + zone[0][1],
-        "left": mon["left"] + zone[0][0],
-        "width": zone[1][0] - zone[0][0],  # 手动指定区域
-        "height": zone[1][1] - zone[0][1],
-    }
-
-    def getSCreen():
-        screen = sct.grab(monitor)
-        img = np.array(screen)
-        # img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-        return img
-    return getSCreen
-
-
-screenCapturer = getScreenCapturer()
+from utils.imgTools import *
 
 
 hue_min = 0
@@ -88,6 +56,10 @@ cv2.createTrackbar('Saturation Min', 'Parameter Tool', 0, 255, on_trackbar)
 cv2.createTrackbar('Saturation Max', 'Parameter Tool', 255, 255, on_trackbar)
 cv2.createTrackbar('Value Min', 'Parameter Tool', 0, 255, on_trackbar)
 cv2.createTrackbar('Value Max', 'Parameter Tool', 255, 255, on_trackbar)
+cv2.createTrackbar('show ocr', 'Parameter Tool', 0, 1, on_trackbar)
+# def button_callback(x):
+#     print("button click")
+# cv2.createButton('Button', button_callback, None, cv2.WINDOW_NORMAL)
 cv2.setMouseCallback('Display', draw_rectangle)
 
 
@@ -97,8 +69,7 @@ def update_image(original_image):
     lower_range = np.array([hue_min, saturation_min, value_min])
     upper_range = np.array([hue_max, saturation_max, value_max])
     filtered_image = cv2.inRange(hsv_image, lower_range, upper_range)
-    result = cv2.bitwise_and(
-        original_image, original_image, mask=filtered_image)
+    result = cv2.bitwise_and(original_image, original_image, mask=filtered_image)
     cv2.rectangle(result, (x1, y1), (x2, y2), (0, 255, 0), 1)
     return result
 
@@ -107,13 +78,15 @@ oi = CnOcr()
 # img = cv2.imread("") #读取文件
 # while True:
 # img = screenCapturer()  # 获取BGR格式图像
-img = screenCapNP()  # 获取BGR格式图像
 
-# img = url2ImgNp("http://192.168.3.155:4443/screenraw")
-img = update_image(img )
-out = oi.ocr(img)
-img = drawOCR2np(    cv2.cvtColor(img , cv2.COLOR_BGR2RGB)   , out,   r"C:\Windows\Fonts\msyhl.ttc", True)
-cv2.imshow('Display', img)
-cv2.waitKey(0)
-# if cv2.waitKey(1) == 27:
-#     break
+while True:
+    # img = url2ImgNp("http://192.168.3.155:4443/screenocr")
+    img = mss2np()
+    img = update_image(img )
+    
+    if cv2.getTrackbarPos('show ocr', 'Parameter Tool') == 1:
+        out = oi.ocr(img)
+        img = drawOCR2np(    img   , out,   r"C:\Windows\Fonts\msyhl.ttc", True)
+    cv2.imshow('Display', img)
+    if cv2.waitKey(1) == 27:
+        break
