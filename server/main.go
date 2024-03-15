@@ -13,6 +13,7 @@ import (
 
 	"github.com/kenshaw/evdev"
 	"github.com/lunixbochs/struc"
+	"github.com/akamensky/argparse"
 )
 
 func toUInputName(name []byte) [uinputMaxNameSize]byte {
@@ -32,6 +33,8 @@ func createDevice(f *os.File) (err error) {
 }
 
 func sendEvents(fd *os.File, events []*evdev.Event) {
+	start := time.Now()
+	defer logger.Debugf("处理%v用时: %v",events, time.Since(start))
 	sizeofEvent := int(unsafe.Sizeof(evdev.Event{}))
 	if fd == nil {
 		logger.Warnf("fd is nil,pass %v", events)
@@ -61,10 +64,10 @@ type event_pack struct {
 	events   []*evdev.Event
 }
 
-func screenCap() {
-
+func screenCap(port) {
 	handleScreenPNG := func(w http.ResponseWriter, r *http.Request) {
-		// start := time.Now()
+		start := time.Now()
+		defer logger.Debugf("截图用时: %v", time.Since(start))
 		c := exec.Command("sh", "-c", "screencap -p")
 		stdout, err := c.StdoutPipe()
 		if err != nil {
@@ -84,15 +87,12 @@ func screenCap() {
 			logger.Error(err)
 			return
 		}
-		// elapsed := time.Since(start) // 计算经过的时间
-		// fmt.Println("Code execution time:", elapsed)
 		w.Header().Set("Content-Type", "image/png")
 		w.Write(imageBytes)
 	}
 	http.HandleFunc("/screen.png", handleScreenPNG)
 	logger.Info("截图服务器 http://0.0.0.0:8888/screen.png")
-	http.ListenAndServe(":8888", nil)
-
+	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)port
 }
 
 func create_u_input_mouse_keyboard() *os.File {
@@ -131,6 +131,7 @@ func create_u_input_mouse_keyboard() *os.File {
 	}
 	deviceFile.Write(uInputDevToBytes(uiDev))
 	createDevice(deviceFile)
+	logger.Info("已创建虚拟键鼠 virtual_mouse_keyboard(uinput)")
 	return deviceFile
 }
 
@@ -199,27 +200,82 @@ func create_u_input_controller() *os.File {
 		}
 		deviceFile.Write(uInputDevToBytes(uiDev))
 		createDevice(deviceFile)
+		logger.Info("已创建虚拟手柄 Xbox Wireless Controller(uinput)")
 		return deviceFile
 	}
 }
+
+
+
+
+
 func main() {
+	parser := argparse.NewParser("uinputJoystick", " ")
+
+	var port *int = parser.Int("p", "port", &argparse.Options{
+		Required: false,
+		Help:     "控制端口 截图端口为UDP端口-1 默认8889",
+		Default:  8889,
+	})
+
+	var timeout *int = parser.Int("t", "timeout", &argparse.Options{
+		Required: false,
+		Help:     "超时自动断开虚拟设备 默认-1为不断开 单位 s",
+		Default:  -1,
+	}) 
+
+	var debug_mode_on *bool = parser.Flag("d", "debug", &argparse.Options{
+		Required: false,
+		Default:  false,
+		Help:     "打印debug信息",
+	})
+
+	err := parser.Parse(os.Args)
+	if err != nil {
+		fmt.Print(parser.Usage(err))
+		os.Exit(1)
+	}
+
+	if *debug_mode_on {
+		logger.WithDebug()
+		logger.Debug("debug on")
+	}
+
 	joystick_deviceFile := create_u_input_controller()
-	if joystick_deviceFile == nil {
-		return
-	}
-	mouse_kb_deviceFile := nil
-	if true {
-		mouse_kb_deviceFile = create_u_input_mouse_keyboard()
-	}
+	mouse_kb_deviceFile := create_u_input_mouse_keyboard()
 	
-	logger.Info("已创建虚拟手柄 Xbox Wireless Controller(uinput)")
+
+	timeout_count = 0
+	if *timeout != -1 {
+		go (func(){
+			for {
+				//sleep(1s)
+				if *timeout == timeout_count{
+					if joystick_deviceFile != nil{
+						joystick_deviceFile.Close()
+						joystick_deviceFile = nil
+						logger.Info("虚拟手柄已断开")
+					}
+					if mouse_kb_deviceFile != nil{
+						mouse_kb_deviceFile.Close()
+						mouse_kb_deviceFile = nil
+						logger.Info("虚拟键鼠已断开")
+					}
+				}else{
+					timeout_count += 1
+				}
+			}
+		})
+	}
+
+	
 	ev_sync := evdev.Event{Type: 0, Code: 0, Value: 0}
 
-	go screenCap()
+	go screenCap(*port -1)
 
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.IPv4(0, 0, 0, 0),
-		Port: 8889,
+		Port: *port,
 	})
 	if err != nil {
 		logger.Errorf("%v", err)
@@ -256,9 +312,17 @@ func main() {
 				write_events = append(write_events, event)
 				write_events = append(write_events, &ev_sync)
 				if event.Type == evdev.EventAbsolute || (event.Type == evdev.EventKey && event.Code >= uint16(evdev.BtnA) && event.Code <= uint16(evdev.BtnThumbR)) {
-					joystick_deviceFile != nil && sendEvents(joystick_deviceFile, write_events)
+					if joystick_deviceFile == nil{
+						joystick_deviceFile = create_u_input_controller()
+						timeout_count = 0
+					}
+					sendEvents(joystick_deviceFile, write_events)
 				} else {
-					mouse_kb_deviceFile != nil && sendEvents(mouse_kb_deviceFile, write_events)
+					if joystick_deviceFile == nil{
+						mouse_kb_deviceFile = create_u_input_mouse_keyboard()
+						timeout_count = 0
+					}
+					sendEvents(mouse_kb_deviceFile, write_events)
 				}
 			}
 		}
