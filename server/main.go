@@ -3,17 +3,19 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 	"unsafe"
 
+	"github.com/akamensky/argparse"
 	"github.com/kenshaw/evdev"
 	"github.com/lunixbochs/struc"
-	"github.com/akamensky/argparse"
 )
 
 func toUInputName(name []byte) [uinputMaxNameSize]byte {
@@ -34,7 +36,7 @@ func createDevice(f *os.File) (err error) {
 
 func sendEvents(fd *os.File, events []*evdev.Event) {
 	start := time.Now()
-	defer logger.Debugf("处理%v用时: %v",events, time.Since(start))
+	defer logger.Debugf("处理%v用时: %v", events, time.Since(start))
 	sizeofEvent := int(unsafe.Sizeof(evdev.Event{}))
 	if fd == nil {
 		logger.Warnf("fd is nil,pass %v", events)
@@ -64,7 +66,7 @@ type event_pack struct {
 	events   []*evdev.Event
 }
 
-func screenCap(port) {
+func screenCap(port int) {
 	handleScreenPNG := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		defer logger.Debugf("截图用时: %v", time.Since(start))
@@ -91,8 +93,8 @@ func screenCap(port) {
 		w.Write(imageBytes)
 	}
 	http.HandleFunc("/screen.png", handleScreenPNG)
-	logger.Info("截图服务器 http://0.0.0.0:8888/screen.png")
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)port
+	logger.Infof("截图服务器 http://0.0.0.0:%v/screen.png", port)
+	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
 func create_u_input_mouse_keyboard() *os.File {
@@ -205,10 +207,6 @@ func create_u_input_controller() *os.File {
 	}
 }
 
-
-
-
-
 func main() {
 	parser := argparse.NewParser("uinputJoystick", " ")
 
@@ -222,7 +220,7 @@ func main() {
 		Required: false,
 		Help:     "超时自动断开虚拟设备 默认-1为不断开 单位 s",
 		Default:  -1,
-	}) 
+	})
 
 	var debug_mode_on *bool = parser.Flag("d", "debug", &argparse.Options{
 		Required: false,
@@ -243,35 +241,42 @@ func main() {
 
 	joystick_deviceFile := create_u_input_controller()
 	mouse_kb_deviceFile := create_u_input_mouse_keyboard()
-	
+	if joystick_deviceFile == nil || mouse_kb_deviceFile == nil {
+		return
+	}
 
-	timeout_count = 0
+	timeout_count_js := 0
+	timeout_count_kb := 0
 	if *timeout != -1 {
-		go (func(){
+		logger.Infof("超时%v秒断开连接已启用", *timeout)
+		go (func() {
 			for {
-				//sleep(1s)
-				if *timeout == timeout_count{
-					if joystick_deviceFile != nil{
+				time.Sleep(time.Second * 1)
+				if *timeout == timeout_count_js {
+					if joystick_deviceFile != nil {
 						joystick_deviceFile.Close()
 						joystick_deviceFile = nil
 						logger.Info("虚拟手柄已断开")
 					}
-					if mouse_kb_deviceFile != nil{
+				} else {
+					timeout_count_js += 1
+				}
+				if *timeout == timeout_count_kb {
+					if mouse_kb_deviceFile != nil {
 						mouse_kb_deviceFile.Close()
 						mouse_kb_deviceFile = nil
 						logger.Info("虚拟键鼠已断开")
 					}
-				}else{
-					timeout_count += 1
+				} else {
+					timeout_count_kb += 1
 				}
 			}
-		})
+		})()
 	}
 
-	
 	ev_sync := evdev.Event{Type: 0, Code: 0, Value: 0}
 
-	go screenCap(*port -1)
+	go screenCap(*port - 1)
 
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.IPv4(0, 0, 0, 0),
@@ -294,7 +299,7 @@ func main() {
 			recv_ch <- buf[:n]
 		}
 	}()
-	logger.Infof("已准备接收远程事件 udp:0.0.0.0:%d", 8889)
+	logger.Infof("已准备接收远程事件 udp:0.0.0.0:%d", *port)
 	for {
 		select {
 		case <-global_close_signal:
@@ -311,16 +316,17 @@ func main() {
 				write_events := make([]*evdev.Event, 0)
 				write_events = append(write_events, event)
 				write_events = append(write_events, &ev_sync)
+
 				if event.Type == evdev.EventAbsolute || (event.Type == evdev.EventKey && event.Code >= uint16(evdev.BtnA) && event.Code <= uint16(evdev.BtnThumbR)) {
-					if joystick_deviceFile == nil{
+					timeout_count_js = 0
+					if joystick_deviceFile == nil {
 						joystick_deviceFile = create_u_input_controller()
-						timeout_count = 0
 					}
 					sendEvents(joystick_deviceFile, write_events)
 				} else {
-					if joystick_deviceFile == nil{
+					timeout_count_kb = 0
+					if mouse_kb_deviceFile == nil {
 						mouse_kb_deviceFile = create_u_input_mouse_keyboard()
-						timeout_count = 0
 					}
 					sendEvents(mouse_kb_deviceFile, write_events)
 				}

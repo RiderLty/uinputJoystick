@@ -16,7 +16,7 @@ import socket
 # README
 #
 # 先安装依赖：
-# pip install pywin32 cnocr[ort-cpu] mss vgamepad bottle paste Pillow
+# pip install  cnocr[ort-cpu] mss vgamepad bottle paste Pillow
 #
 # windows分辨率 1920x1080 缩放100%
 # 推荐游戏内 UI 200%
