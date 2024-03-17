@@ -179,7 +179,8 @@ def imgFilter(image_hsv, hsv, zone):
     assert zone[0][1] < zone[1][1]
     zoneMask[zone[0][1]:zone[1][1], zone[0][0]:zone[1][0]] = 255
     result = cv2.bitwise_and(image_hsv, zoneMask)
-    hsvMask = cv2.inRange(result, np.array( [hsv[0][0], hsv[1][0], hsv[2][0]]), np.array([hsv[0][1], hsv[1][1], hsv[2][1]]))
+    hsvMask = cv2.inRange(result, np.array(
+        [hsv[0][0], hsv[1][0], hsv[2][0]]), np.array([hsv[0][1], hsv[1][1], hsv[2][1]]))
     return hsvMask
 
 # @printPerformance
@@ -209,6 +210,29 @@ def drawHandelScreen(screen):
     return img
 
 
+def template2Mask(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, thresholded = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+    return  cv2.bitwise_not(thresholded)
+
+
+def templateMatch(search, target, threshold=0.8):
+    img = search.copy()
+    w, h = target.shape[1], target.shape[0]
+    results = []
+    while True:
+        res = cv2.matchTemplate(img, target, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(res)
+        # print(max_val,max_loc)
+        if max_val > 1 or max_val < threshold:
+            break
+        else:
+            rectangle = [(max_loc[0], max_loc[1]),(max_loc[0]+w, max_loc[1] + h)]
+            cv2.rectangle(img ,rectangle[0] ,rectangle[1] , [0,0,0,0] , -1 )
+            results.append((max_val, rectangle))
+    return results
+
+
 if __name__ == "__main__":
     from cnocr import CnOcr
     oi = CnOcr()
@@ -216,7 +240,7 @@ if __name__ == "__main__":
     pilcap = mss2pil(zone=[(0, 1), (500, 500)])
     while True:
         # img = url2ImgPIL("http://192.168.3.155:4443/screenraw")
-        img =  handelScreen(mss2np())
+        img = handelScreen(mss2np())
         # img = pil2np(img)
         # out = oi.ocr(img)
         # img = drawOCR2np(img, out, r"C:\Windows\Fonts\msyhl.ttc", True)

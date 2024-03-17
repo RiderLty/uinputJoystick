@@ -13,9 +13,8 @@ class actions():
 
     def clusterReset(self):
         '''移动光标到左上角头像为止,完成后返回'''
-        for _ in range(255):
-            self.ctr.mouseMove(-127, -127)
-            self.ctr.sleep(1)
+        self.ctr.mouseMove(-65535, -65535)
+        self.ctr.sleep(100)
         self.ctr.click(BTN.BTN_DPAD_RIGHT)
         self.ctr.sleep(200)
         self.ctr.wait()

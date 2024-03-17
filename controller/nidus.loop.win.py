@@ -1,9 +1,13 @@
+from enum import Enum
 import io
+import logging
 from time import sleep as s_sleep
 from time import sleep
 import threading
 from bottle import *
 import cv2
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import numpy as np
 from utils.imgTools import *
 from utils.taskScheduler import scheduled
@@ -13,11 +17,16 @@ from cnocr import CnOcr
 from cnocr.utils import draw_ocr_results
 from nidus_action import *
 from PIL import Image
-
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+import coloredlogs
+from uvicorn import Config, Server
+from os.path import join as path_join
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 # README
 #
 # 先安装依赖：
-# pip install pywin32 cnocr[ort-cpu] mss vgamepad bottle paste Pillow
+# pip install pywin32 cnocr[ort-cpu] mss vgamepad  Pillow  fastapi coloredlogs uvicorn[standard]
 #
 # windows分辨率 1920x1080 缩放100%
 # 游戏内 HUD尺寸 200%
@@ -28,6 +37,43 @@ from PIL import Image
 # 准备工作做好后，ESC暂停，然后网页端点击开始
 
 # XBOX挂机的时候记得关闭辅助瞄准
+
+
+
+wsLoggerClients = set()
+
+def log_callback(message):
+    for ws in wsLoggerClients:
+        mainEventLoop.create_task(ws.send_text(f"{message}"))
+    
+logger = logging.getLogger(f'{"main"}:{"loger"}')
+fmt = f"🤖%(asctime)s .%(levelname)s %(message)s"
+coloredlogs.install(
+    level=logging.INFO, logger=logger, milliseconds=False, datefmt='%m-%d %H:%M:%S', fmt=fmt ,
+)
+formatter = logging.Formatter(fmt = f"🤖%(asctime)s .%(levelname)s \t%(message)s" , datefmt='%m-%d %H:%M:%S')
+class CallbackHandler(logging.Handler):
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.callback(msg)
+
+handler = CallbackHandler(callback=log_callback)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+last_ocr_text = ""
+class scriptType(Enum):
+    nidus_single = 0
+    fire_multi = 1
+
+
+# TYPE = scriptType.fire_multi
+TYPE = scriptType.nidus_single
+
 
 cnocrInstance = CnOcr()
 
@@ -62,18 +108,18 @@ def sleep(ms):
 
 ctr = scheduled(controller=controller())
 nidus = actions(ctr=ctr)
-
 fsm = ThreadSafeValue(-1)
 
 
 def mainLoop(state: ThreadSafeValue):
+    global TYPE
     while True:
         if state.get_value() != 0:
-            print("主循环已暂停")
+            logger.info("主循环已暂停")
             state.waitFor(0)
-            print("主循环已启动")
-        nidus.mainLoopOnceWait_with_backRight()
-        # nidus.mainLoop_shoot_and_move()
+            logger.info("主循环已启动")
+        TYPE == scriptType.nidus_single and nidus.mainLoopOnceWait_with_backRight()
+        TYPE == scriptType.fire_multi and nidus.mainLoop_shoot_and_move()
 
 
 def remove_non_digits(text):
@@ -82,31 +128,32 @@ def remove_non_digits(text):
 
 def autoSelectHT():
     nidus.clusterReset()
-    maxRightCount = -1
     maxValue = -1
     ctr.sleep(100)
-    for i in range(8):
-        ctr.click(BTN.BTN_DPAD_RIGHT)
-        ctr.sleep(500)
+    ctr.click(BTN.BTN_DPAD_DOWN)
+    ctr.sleep(50)
+    ctr.click(BTN.BTN_DPAD_DOWN)
+    ctr.sleep(50)
+    for i in range(4):
+        if i != 0:
+            ctr.click(BTN.BTN_DPAD_RIGHT)  # 两次下就是第一个了
+        ctr.sleep(700)
         ctr.wait()
         screen = handelScreen(mss2np())
         ocrResult = cnocrInstance.ocr(screen)
         allText = "#".join([x["text"].strip() for x in ocrResult]).strip()
-        print(allText)
-        if "杜卡德" in allText:
-            print("检测到关键词 ")
-            value = int(remove_non_digits(
-                allText.split("杜卡德")[0].split("#")[-1]))
-            print("当前value = ", value)
-            if value >= maxValue:
-                maxRightCount = i
-                maxValue = value
-        print("\n")
-    nidus.clusterReset()
-    for _ in range(maxRightCount + 1):
-        ctr.click(BTN.BTN_DPAD_RIGHT)
-        ctr.sleep(300)
-    ctr.click(BTN.BTN_A)
+        logger.debug(allText)
+        for keyword in ["杜卡德", "社卡德"]:
+            if keyword in allText:
+                logger.info(f"检测到关键词 {keyword}")
+                value = int(remove_non_digits(
+                    allText.split(keyword)[0].split("#")[-1]))
+                logger.info(f"当前金币值为{value}")
+                if value >= maxValue:
+                    maxValue = value
+                    ctr.click(BTN.BTN_A)
+                    ctr.wait()
+                break
     ctr.wait()
 
 
@@ -118,10 +165,11 @@ def checkText(template, targets):
 
 
 def watcher(state: ThreadSafeValue):
-    
+    global TYPE, last_ocr_text
+
     def goto(x):
         state.set_value(x)
-    
+
     def eq(x):
         return state.get_value() == x
 
@@ -130,239 +178,186 @@ def watcher(state: ThreadSafeValue):
         ctr.wait()
 
     while True:
-        sc_img = handelScreen(mss2np()) # 节省资源的，不用了
-        # sc_img = mss2np()
+        # sc_img = handelScreen(mss2np())  # 节省资源的，不用了
+        sc_img = mss2np()
         out = cnocrInstance.ocr(sc_img)
         allText = "#".join([f'{x["text"].strip()}'for x in out]).strip()
+        last_ocr_text = allText
         latestState = state.get_value()
-        if eq(-1):#停止状态
-            print("观察者已暂停")
-            state.waitFor(0)#等待0
-            print("观察者已启动")
-        elif eq(0):#多数时候的状态
-            if checkText(allText, ["来复活", "前往撤离点"]):#停止信号
-                goto(1)#再次确认
-            elif checkText(allText, ["报酬"]):#核桃开了
-                goto(3)#等待选择遗物
-                breakActions()#停止动作
-                # autoSelectHT() #单人记得注释掉
+        if eq(-1):  # 停止状态
+            logger.info("观察者已暂停")
+            state.waitFor(0)  # 等待0
+            logger.info("观察者已启动")
+        elif eq(0):  # 多数时候的状态
+            if checkText(allText, ["来复活", "前往撤离点"]):  # 停止信号
+                goto(1)  # 再次确认
+            elif checkText(allText, ["报酬"]):  # 核桃开了
+                goto(3)  # 等待选择遗物
+                breakActions()  # 停止动作
+                TYPE == scriptType.fire_multi and autoSelectHT()  # 单人记得注释掉
             else:
-                pass#不执行任何动作
+                pass  # 不执行任何动作
         elif eq(1):
-            if checkText(allText, ["来复活", "前往撤离点"]):#停止信号
-                goto(2)#再次确认
+            if checkText(allText, ["来复活", "前往撤离点"]):  # 停止信号
+                goto(2)  # 再次确认
             else:
-                goto(0)#没了 回到主状态
+                goto(0)  # 没了 回到主状态
         elif eq(2):
-            if checkText(allText, ["来复活", "前往撤离点"]):#停止了
-                goto(-1)#到停止态
+            if checkText(allText, ["来复活", "前往撤离点"]):  # 停止了
+                goto(-1)  # 到停止态
                 breakActions()
                 ctr.click(BTN.BTN_START)
             else:
-                goto(0)#没了 回到主状态
+                goto(0)  # 没了 回到主状态
         elif eq(3):
-            if checkText(allText, ["选择遗物"]):#选择遗物了
-                goto(4) # 到等待状态
+            if checkText(allText, ["选择遗物"]):  # 选择遗物了
+                goto(4)  # 到等待状态
                 nidus.selectHT()
             else:
                 pass
         elif eq(4):
             if checkText(allText, ["生存"]):
-                goto(0) #检测到关键词 回到主状态
+                ctr.sleep(500)
+                goto(0)  # 检测到关键词 回到主状态
             else:
-                pass #继续等待
-        latestState != state.get_value() and print(datetime.datetime.now(),f"{latestState} => {state.get_value()}")
+                pass  # 继续等待
+        latestState != state.get_value() and logger.info(f"状态改变 {latestState} => {state.get_value()}")
         sleep(1000)
 
-@route("/jmp", method="GET")
+
+def init_logger():
+    LOGGER_NAMES = ("uvicorn", "uvicorn.access",)
+    for logger_name in LOGGER_NAMES:
+        logging_logger = logging.getLogger(logger_name)
+        fmt = f"🌏%(asctime)s .%(levelname)s %(message)s"  # 📨
+        coloredlogs.install(
+            level=logging.WARN, logger=logging_logger, milliseconds=False, datefmt='%m-%d %H:%M:%S', fmt=fmt
+        )
+
+
+app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+mainEventLoop = asyncio.get_event_loop()
+
+
+@app.get("/")
+def index():
+    return FileResponse(path_join("controller/html", "index.html"))
+
+
+@app.get("/ocr")
+def last_ocr_result():
+    global last_ocr_text
+    return last_ocr_text
+
+
+@app.get("/screen")
+@app.get("/screen/{path}")
+def screen_path(path: str = None):
+    image = mss2np()
+    if path == "raw":
+        return Response(
+        cv2.imencode('.png', image)[1].tobytes(),
+        headers={"Content-Type": "image/jpeg",
+                 "Cache-Control": "max-age=31536000"},
+    )
+    if path == "ocr":
+        screen = image.copy()
+        img = handelScreen(screen)
+        out = cnocrInstance.ocr(img)
+        draw = drawHandelScreen(image)
+        image = drawOCR2np(draw, out, r"NotoSansHans-Regular-2.ttf", True)
+    if path == "draw":
+        image = drawHandelScreen(image)
+    if path == "mask":
+        image = handelScreen(image)
+    return Response(
+        cv2.imencode('.jpg', image,[int(cv2.IMWRITE_JPEG_QUALITY), 70])[1].tobytes(),
+        headers={"Content-Type": "image/jpeg",
+                 "Cache-Control": "max-age=31536000"},
+    )
+
+
+@app.get("/jmp")
 def jmp():
+    logger.info("翻墙x1")
     nidus.jump()
 
 
-@route("/start")
+@app.get("/start")
 def start():
-    print("开始")
-    ctr.click(BTN.BTN_LS)
-    ctr.sleep(100)
-    ctr.click(BTN.BTN_B)
-    ctr.sleep(1000)
-    ctr.wait()
-    fsm.set_value(0)
+    global fsm
+    if fsm.get_value() == -1:
+        logger.info("已发送开始指令")
+        ctr.click(BTN.BTN_LS)
+        ctr.sleep(100)
+        ctr.click(BTN.BTN_B)
+        ctr.sleep(1000)
+        ctr.wait()
+        fsm.set_value(0)
+    else:
+        logger.info("已在运行")
 
-
-@route("/stop")
+@app.get("/stop")
 def stop():
-    print("停止")
-    fsm.set_value(-1)
-    ctr.interrupt()
-    ctr.wait()
-    ctr.click(BTN.BTN_START)
+    if fsm.get_value() != -1:
+        logger.info("已发送停止指令")
+        fsm.set_value(-1)
+        ctr.interrupt()
+        ctr.wait()
+        ctr.click(BTN.BTN_START)
+    else:
+        logger.info("已停止")
 
-
-@route("/test")  # 测试函数放在这里运行
+@app.get("/test")  # 测试函数放在这里运行
 def test():
+    logger.info("测试函数执行中")
     ctr.setRS(0, 1)
     ctr.sleep(300)
     ctr.setRS(0, 0)
     ctr.wait()
-
-
-@route("/screenmask")
-def screen():
-    try:
-        img = handelScreen(mss2np())
-        img = np2pil(img)  # mask是灰度图像
-        save_options = {
-            'format': 'JPEG',
-            'quality': 72  # 设置图片质量，范围为0-100
-        }
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, **save_options)
-        img_byte_arr = img_byte_arr.getvalue()
-        response.headers['Content-Type'] = 'image/jpg'
-        response.headers['Content-Length'] = len(img_byte_arr)
-        return img_byte_arr
-    except Exception as e:
-        return str(e)
-
-
-@route("/screen")
-def screen():
-    try:
-        img = drawHandelScreen(mss2np())
-        img = np2pil(img)  # mask是灰度图像
-        save_options = {
-            'format': 'JPEG',
-            'quality': 72  # 设置图片质量，范围为0-100
-        }
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, **save_options)
-        img_byte_arr = img_byte_arr.getvalue()
-        response.headers['Content-Type'] = 'image/jpg'
-        response.headers['Content-Length'] = len(img_byte_arr)
-        return img_byte_arr
-    except Exception as e:
-        return str(e)
-
-
-@route("/screenraw")
-def screen():
-    try:
-        img = mss2pil()
-        save_options = {
-            'format': 'JPEG',
-            'quality': 100  # 设置图片质量，范围为0-100
-        }
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, **save_options)
-        img_byte_arr = img_byte_arr.getvalue()
-        response.headers['Content-Type'] = 'image/jpg'
-        response.headers['Content-Length'] = len(img_byte_arr)
-        return img_byte_arr
-    except Exception as e:
-        return str(e)
-
-
-@route("/screenocr")
-def screen():
-    try:
-        screen = mss2np()
-        draw = drawHandelScreen(mss2np())
-        img = handelScreen(screen)
-        out = cnocrInstance.ocr(img)
-        rawDraw = drawOCR2np(draw, out, r"C:\Windows\Fonts\msyhl.ttc", True)
-        img = np2pil(rawDraw)
-        save_options = {
-            'format': 'JPEG',
-            'quality': 72  # 设置图片质量，范围为0-100
-        }
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, **save_options)
-        img_byte_arr = img_byte_arr.getvalue()
-        response.headers['Content-Type'] = 'image/jpg'
-        response.headers['Content-Length'] = len(img_byte_arr)
-        return img_byte_arr
-    except Exception as e:
-        return str(e)
-
-
-@route("/")
-def index():
-    return '''<!DOCTYPE html>
-<html>
-<head>
-<style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .container button {
-      flex: 1;
-      font-size: 50px;
-    }
+    logger.info("测试函数执行完毕")
     
-    .container img {
-      flex: 1;
-      width: 100%
-    }
-  </style>
-  <title>GET请求示例</title>
-  <script>
-    const performGetRequest = (url) => {
-      fetch(url)
-        .then(response => response.text())
-        .then(data => {
-          console.log(data);
-          // 在这里可以添加处理响应数据的逻辑
-        })
-        .catch(error => {
-          console.error('发生错误:', error);
-        });
-    }
-    (() => {
-        setInterval( () => { document.querySelector("#img").src = `/screen?t=${Date.now()}`   } , 1000)
-    })()
-    
-  </script>
-</head>
-<body>
-<div class="container">
-  <img src="/screen" id="img" >
-  <button onclick="performGetRequest('/jmp')">指挥官翻墙</button>
-  <button onclick="performGetRequest('/start')">开始</button>
-  <button onclick="performGetRequest('/stop')">停止</button>
-  <button onclick="performGetRequest('/test')">测试功能</button>
-</div>
-</body>
-</html>'''
 
 
-def server():
-    run(host="0.0.0.0", port=4443, reloader=False,   quiet=True)
+@app.websocket("/wsLogger")
+async def websocket_endpoint(websocket: WebSocket):
+    # 连接建立时，将客户端添加到集合中
+    await websocket.accept()
+    wsLoggerClients.add(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            pass
+    except Exception as e:
+        wsLoggerClients.remove(websocket)
+        pass
+
+app.mount("/", StaticFiles(directory="controller/html"), name="static")
+
+def getServer(port):
+    serverConfig = Config(
+        app=app,
+        # host="::",
+        host="0.0.0.0",
+        port=port,
+        log_level="info",
+        ws_max_size=1024*1024*1024*1024,
+    )
+    return Server(serverConfig)
 
 
 if __name__ == "__main__":
+    serverInstance = getServer(4443)
+    init_logger()
     threading.Thread(target=mainLoop, args=(fsm,)).start()
     threading.Thread(target=watcher, args=(fsm,)).start()
-    threading.Thread(target=server).start()
-
-    # print("helllo")
-    # # img = cv2.imread(r"D:\Pictures\Screenshots\warframe\SC (16).png")
-    # img = mss2np()
-
-    # img = handelScreen(img)
-
-    # cv2.imshow('Filtered Image', img)
-
-    # while True:
-    #     if cv2.waitKey(1) == 27:
-    #         break
-    # cv2.destroyAllWindows()
+    mainEventLoop.run_until_complete(serverInstance.serve())

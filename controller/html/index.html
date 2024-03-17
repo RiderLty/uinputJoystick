@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .imgContainer {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        .img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .panel {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+        }
+
+        @media (min-width: 1200px) {
+            .container {
+                flex-direction: row;
+            }
+
+            .panel {
+                flex: 1;
+
+            }
+
+            .imgContainer {
+                flex: 3;
+            }
+        }
+
+        .console {
+            flex: 3;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            resize: none;
+            color: white;
+        }
+
+        .buttons {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .button {
+            flex: 1;
+            font-size: 2rem;
+            background-color: #b20254;
+            color:#ffffff
+        }
+    </style>
+    <title>GET请求示例</title>
+    <script>
+        const performGetRequest = (url) => {
+            fetch(url)
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    // 在这里可以添加处理响应数据的逻辑
+                })
+                .catch(error => {
+                    console.error('发生错误:', error);
+                });
+        }
+        (() => {
+            setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 500)
+        })()
+        const setupWebsocket = () => {
+            const websocket = new WebSocket(`ws://${window.location.host}/wsLogger`);
+            websocket.onopen = () => {
+                console.log('WebSocket连接已打开');
+            };
+            websocket.onmessage = (event) => {
+                const consoleTextArea = document.getElementById("console")
+                consoleTextArea.textContent += "\n"
+                consoleTextArea.textContent += event.data
+                consoleTextArea.scrollTop = consoleTextArea.scrollHeight;
+            };
+            websocket.onclose = (event) => {
+                console.log('WebSocket连接已关闭:', event.code, event.reason);
+                setTimeout(setupWebsocket, 100)
+            };
+        }
+        setupWebsocket()
+
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="imgContainer">
+            <img class="img" src="/screen" id="img">
+        </div>
+        <div class="panel">
+            <textarea class="console" id="console" disabled>
+            </textarea>
+            <div class="buttons">
+                <button class="button " onclick="performGetRequest('/jmp')">指挥官翻墙</button>
+                <button class="button" onclick="performGetRequest('/start')">开始</button>
+                <button class="button" onclick="performGetRequest('/stop')">停止</button>
+                <button class="button" onclick="performGetRequest('/test')">测试功能</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

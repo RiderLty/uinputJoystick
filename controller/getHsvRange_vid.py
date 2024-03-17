@@ -75,15 +75,15 @@ def update_image(original_image):
 
 
 oi = CnOcr()
-# img = cv2.imread("") #读取文件
+ #读取文件
 # while True:
 # img = screenCapturer()  # 获取BGR格式图像
 
 while True:
     # img = url2ImgNp("http://192.168.3.155:4443/screenocr")
-    img = mss2np()
+    # img = mss2np()
+    img = cv2.imread(r"D:\Pictures\Screenshots\warframe\bc4.png")
     img = update_image(img )
-    
     if cv2.getTrackbarPos('show ocr', 'Parameter Tool') == 1:
         out = oi.ocr(img)
         img = drawOCR2np(    img   , out,   r"C:\Windows\Fonts\msyhl.ttc", True)
