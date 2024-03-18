@@ -1,23 +1,16 @@
 from enum import Enum
-import io
 import logging
 from time import sleep as s_sleep
-from time import sleep
 import threading
-from bottle import *
 import cv2
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-import numpy as np
 from utils.imgTools import *
 from utils.taskScheduler import scheduled
 from utils.interface.winController import *
-import datetime
 from cnocr import CnOcr
-from cnocr.utils import draw_ocr_results
 from nidus_action import *
-from PIL import Image
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 import coloredlogs
 from uvicorn import Config, Server
 from os.path import join as path_join
