@@ -223,7 +223,7 @@ def templateMatch(search, target, threshold=0.8):
     while True:
         res = cv2.matchTemplate(img, target, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(res)
-        # print(max_val,max_loc)
+        print(max_val,max_loc)
         if max_val > 1 or max_val < threshold:
             break
         else:

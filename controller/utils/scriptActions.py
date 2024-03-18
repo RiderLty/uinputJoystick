@@ -1,8 +1,9 @@
 import sys
 from utils.taskScheduler import scheduled
 
-from utils.interface.winController import *
-if not sys.platform.startswith('win'):
+if sys.platform.startswith('win'):
+    from utils.interface.winController import *
+else:
     from utils.interface.serverController import *
 
 
@@ -19,10 +20,25 @@ class actions():
         self.ctr.sleep(200)
         self.ctr.wait()
 
+    
+    def dpadReset(self):
+        '''方向键重置 功能与clusterReset相同，但适用于无鼠标情况'''
+        for _ in range(8):
+            self.ctr.click(BTN.BTN_DPAD_LEFT)
+            self.ctr.sleep(50)
+        for _ in range(5):
+            self.ctr.click(BTN.BTN_DPAD_UP)
+            self.ctr.sleep(50)
+        for _ in range(3):
+            self.ctr.click(BTN.BTN_DPAD_LEFT)
+            self.ctr.sleep(50)
+        for _ in range(3):
+            self.ctr.click(BTN.BTN_DPAD_UP)
+            self.ctr.sleep(50)
+        self.ctr.wait()
+
     def selectHT(self,):  # 开核桃 使用方向键导航 ，先到坐上然后用手柄确认
         '''使用方向键导航到左上角，然后选择第一个核桃，完成后返回'''
-        
-        self.clusterReset()
         self.ctr.click(BTN.BTN_DPAD_RIGHT)
         self.ctr.sleep(100)
         self.ctr.click(BTN.BTN_DPAD_DOWN)

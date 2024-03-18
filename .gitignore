@@ -1,2 +1,4 @@
 
 */__pycache__
+/controller/assets/saveTmp
+*.pyc

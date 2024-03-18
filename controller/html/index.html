@@ -39,7 +39,6 @@
 
             .panel {
                 flex: 1;
-
             }
 
             .img {
@@ -86,7 +85,7 @@
                 });
         }
         (() => {
-            setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 500)
+            setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 2000)
         })()
         const setupWebsocket = () => {
             const websocket = new WebSocket(`ws://${window.location.host}/wsLogger`);
