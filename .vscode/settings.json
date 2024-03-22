@@ -4,11 +4,13 @@
         "astype",
         "Debugf",
         "DPAD",
+        "dukade",
         "evdev",
         "fromarray",
         "frombuffer",
         "hetao",
         "imdecode",
+        "inaros",
         "Infof",
         "lunixbochs",
         "ndarray",
@@ -26,6 +28,7 @@
         "UISETPROPBIT",
         "Warnf",
         "Wasd",
-        "Whell"
+        "Whell",
+        "xzyw"
     ]
 }

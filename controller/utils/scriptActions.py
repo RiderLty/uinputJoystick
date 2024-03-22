@@ -132,3 +132,26 @@ class actions():
             self.ctr.release(BTN.BTN_DPAD_LEFT)
             self.ctr.sleep(10)
         self.ctr.wait()
+        
+    def mainLoop_shoot_and_move_inaros(self):
+        self.ctr.setLS(0, 1)  # 向前
+        self.ctr.sleep(50)
+        self.ctr.click(BTN.BTN_LB)  # 向前翻滚
+        self.ctr.setLS(0, 0)
+        self.ctr.sleep(800)
+
+        self.ctr.setLS(1, -1)
+        self.ctr.sleep(50)
+        self.ctr.click(BTN.BTN_LB)  # 向右后翻滚
+        self.ctr.setLS(0, 0)
+        self.ctr.sleep(800)
+        
+        self.ctr.setLS(-1, -1)  # 
+        self.ctr.sleep(1200)
+        self.ctr.setLS(0, 0)
+
+        self.ctr.press(BTN.BTN_DPAD_LEFT)
+        self.ctr.sleep(1000 * 7)
+        self.ctr.release(BTN.BTN_DPAD_LEFT)
+
+        self.ctr.wait()

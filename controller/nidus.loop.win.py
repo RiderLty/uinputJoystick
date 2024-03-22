@@ -1,7 +1,7 @@
-import logging
-import threading
+from utils.customLogger import *
+import os
 import cv2
-import coloredlogs
+import argparse
 from os.path import join as path_join
 
 from fastapi import FastAPI, Response, WebSocket
@@ -15,13 +15,11 @@ from utils.taskScheduler import scheduled
 from utils.imgTools import *
 from utils.scriptActions import *
 from utils.tools import *
-
-
-
+from utils.scriptController import *
 # README
 #
 # 先安装依赖：
-# pip install pywin32 cnocr[ort-cpu] mss vgamepad  Pillow  fastapi coloredlogs uvicorn[standard]
+# pip install pywin32 cnocr[ort-cpu] mss vgamepad  Pillow  fastapi coloredlogs uvicorn[standard] argparse
 #
 # windows分辨率 1920x1080 缩放100%
 # 游戏内 HUD尺寸 200%
@@ -33,212 +31,35 @@ from utils.tools import *
 
 # XBOX挂机的时候记得关闭辅助瞄准
 
-
-# TYPE = scriptType.fire_multi
-TYPE = scriptType.nidus_single
+parser = argparse.ArgumentParser(usage="指定脚本类型\n", description="help info.")
+parser.add_argument("--type", type=str, default="nidus",help="执行的脚本 nidus/inaros ")
+parser.add_argument("--screen", type=str, default="mss", help="截图获取方式 mss/url")
+parser.add_argument("--match", type=str, default="ocr",   help="匹配方式 ocr/template")
+parser.add_argument("--relic", type=int, default=-1, help="开核桃人数 -1 ~ 4")
+args = parser.parse_args()
 
 WINDOWS = sys.platform.startswith('win')
-
-
-
-
-#==============================================================================================================
+# ==============================================================================================================
 wsLoggerClients = set()
-
-if WINDOWS:
-    ctr = scheduled(controller=controller())
-else:    
-    ctr = scheduled(controller=controller("127.0.0.1:8889"))
-    
-warframe = actions(ctr=ctr)
-fsm = ThreadSafeValue(-1) #状态机
-#==============================================================================================================
-
-def mainLoop(state: ThreadSafeValue , ctr:scheduled , type  :scriptType , logger : logging.Logger):
-    while True:
-        if state.get_value() != 0:
-            logger.info("主循环已暂停")
-            state.waitFor(0)
-            logger.info("主循环已启动")
-        type == scriptType.nidus_single and warframe.mainLoopOnceWait_with_backRight()
-        type == scriptType.fire_multi and warframe.mainLoop_shoot_and_move()
-
-
-
-
-if WINDOWS:
-    from cnocr import CnOcr
-    def watcher(state: ThreadSafeValue , ctr:scheduled , type  :scriptType , logger : logging.Logger):
-        cnocrInstance = CnOcr()
-        def goto(x):
-            state.set_value(x)
-        def eq(x):
-            return state.get_value() == x
-        def breakActions():
-            ctr.interrupt()
-            ctr.wait()
-        def autoSelectHT():
-            warframe.clusterReset()
-            maxValue = -1
-            ctr.sleep(100)
-            ctr.click(BTN.BTN_DPAD_DOWN)
-            ctr.sleep(50)
-            ctr.click(BTN.BTN_DPAD_DOWN)
-            ctr.sleep(50)
-            for i in range(4):
-                if i != 0:
-                    ctr.click(BTN.BTN_DPAD_RIGHT)  # 两次下就是第一个了
-                ctr.sleep(700)
-                ctr.wait()
-                screen = handelScreen(mss2np())
-                ocrResult = cnocrInstance.ocr(screen)
-                allText = "#".join([x["text"].strip() for x in ocrResult]).strip()
-                logger.debug(allText)
-                for keyword in ["杜卡德", "社卡德"]:
-                    if keyword in allText:
-                        logger.info(f"检测到关键词 {keyword}")
-                        value = int(remove_non_digits(
-                            allText.split(keyword)[0].split("#")[-1]))
-                        logger.info(f"当前金币值为{value}")
-                        if value >= maxValue:
-                            maxValue = value
-                            ctr.click(BTN.BTN_A)
-                            ctr.wait()
-                        break
-            ctr.wait()
-        while True:
-            # sc_img = handelScreen(mss2np())  # 节省资源的，不用了
-            sc_img = mss2np()
-            out = cnocrInstance.ocr(sc_img)
-            allText = "#".join([f'{x["text"].strip()}'for x in out]).strip()
-            latestState = state.get_value()
-            if eq(-1):  # 停止状态
-                logger.info("观察者已暂停")
-                state.waitFor(0)  # 等待0
-                logger.info("观察者已启动")
-            elif eq(0):  # 多数时候的状态
-                if checkText(allText, ["来复活", "前往撤离点"]):  # 停止信号
-                    goto(1)  # 再次确认
-                elif checkText(allText, ["报酬"]):  # 核桃开了
-                    goto(3)  # 等待选择遗物
-                    breakActions()  # 停止动作
-                    type == scriptType.fire_multi and autoSelectHT()  # 单人记得注释掉
-                else:
-                    pass  # 不执行任何动作
-            elif eq(1):
-                if checkText(allText, ["来复活", "前往撤离点"]):  # 停止信号
-                    goto(2)  # 再次确认
-                else:
-                    goto(0)  # 没了 回到主状态
-            elif eq(2):
-                if checkText(allText, ["来复活", "前往撤离点"]):  # 停止了
-                    goto(-1)  # 到停止态
-                    breakActions()
-                    ctr.click(BTN.BTN_START)
-                else:
-                    goto(0)  # 没了 回到主状态
-            elif eq(3):
-                if checkText(allText, ["选择遗物"]):  # 选择遗物了
-                    goto(4)  # 到等待状态
-                    warframe.clusterReset()
-                    warframe.selectHT()
-                else:
-                    pass
-            elif eq(4):
-                if checkText(allText, ["生存"]):
-                    ctr.sleep(500)
-                    goto(0)  # 检测到关键词 回到主状态
-                else:
-                    pass  # 继续等待
-            latestState != state.get_value() and logger.info(f"状态改变 {latestState} => {state.get_value()}")
-            sleep(1000)
-else:
-    def watcher(state: ThreadSafeValue , ctr:scheduled , type  :scriptType , logger : logging.Logger):
-        def goto(x):
-            state.set_value(x)
-        def eq(x):
-            return state.get_value() == x
-        def breakActions():
-            ctr.interrupt()
-            ctr.wait()
-        while True:
-            sc_img = url2ImgNp("http://127.0.0.1:8888/screen.png")
-            latestState = state.get_value()
-            if eq(-1):  # 停止状态
-                logger.info("观察者已暂停")
-                state.waitFor(0)  # 等待0
-                logger.info("观察者已启动")
-            elif eq(0):  # 多数时候的状态
-                logger.debug("匹配撤离与复活")
-                logger.debug("匹配 报酬.png")
-                if len(templateMatch(sc_img , cv2.imread("controller/assets/lfh.png"))) > 0 or len(templateMatch(sc_img , cv2.imread("controller/assets/cld.png"))) > 0:  # 停止信号
-                    goto(1)  # 再次确认
-                elif len(templateMatch(sc_img , cv2.imread("controller/assets/bc.png"))) > 0:  # 核桃开了
-                    goto(3)  # 等待选择遗物
-                    breakActions()  # 停止动作
-                else:
-                    pass  # 不执行任何动作
-            elif eq(1):
-                logger.debug("匹配撤离与复活")
-                if len(templateMatch(sc_img , cv2.imread("controller/assets/lfh.png"))) > 0 or len(templateMatch(sc_img , cv2.imread("controller/assets/cld.png"))) > 0:  # 停止信号
-                    goto(2)  # 再次确认
-                else:
-                    goto(0)  # 没了 回到主状态
-            elif eq(2):
-                logger.debug("匹配撤离与复活")
-                if len(templateMatch(sc_img , cv2.imread("controller/assets/lfh.png"))) > 0 or len(templateMatch(sc_img , cv2.imread("controller/assets/cld.png"))) > 0:  # 停止了
-                    goto(-1)  # 到停止态
-                    breakActions()
-                    ctr.click(BTN.BTN_START)
-                else:
-                    goto(0)  # 没了 回到主状态
-            elif eq(3):
-                logger.debug("匹配 选择遗物.png")
-                if len(templateMatch(sc_img , cv2.imread("controller/assets/xzyw.png"))) > 0:  # 选择遗物了
-                    goto(4)  # 到等待状态
-                    warframe.dpadReset()
-                    warframe.selectHT()
-                else:
-                    pass
-            elif eq(4):
-                logger.debug("匹配 生存.png")
-                if len(templateMatch(sc_img , cv2.imread("controller/assets/sc.png"))) > 0:
-                    ctr.sleep(500)
-                    goto(0)  # 检测到关键词 回到主状态
-                else:
-                    pass  # 继续等待
-            latestState != state.get_value() and logger.info(f"状态改变 {latestState} => {state.get_value()}")
-            sleep(300)
-
-
-def init_logger():
-    LOGGER_NAMES = ("uvicorn", "uvicorn.access",)
-    for logger_name in LOGGER_NAMES:
-        logging_logger = logging.getLogger(logger_name)
-        fmt = f"🌏%(asctime)s .%(levelname)s %(message)s"  # 📨
-        coloredlogs.install(
-            level=logging.WARN, logger=logging_logger, milliseconds=False, datefmt='%m-%d %H:%M:%S', fmt=fmt
-        )
-
-#==============================================================================================================
-logger = logging.getLogger(f'{"main"}:{"loger"}')
-fmt = f"🤖%(asctime)s .%(levelname)s %(message)s"
-coloredlogs.install(
-    level=logging.DEBUG, logger=logger, milliseconds=False, datefmt='%m-%d %H:%M:%S', fmt=fmt ,
+ctr = scheduled(controller=controller()  if WINDOWS else controller("127.0.0.1:8889") )
+sci = scriptController(
+    ctr=ctr,
+    logger=logger,
+    args=args
 )
-formatter = logging.Formatter(fmt = f"🤖%(asctime)s .%(levelname)s \t%(message)s" , datefmt='%m-%d %H:%M:%S')
-def log_callback(message):
+sci.start()
+
+mainEventLoop = asyncio.get_event_loop()
+# ==============================================================================================================
+
+def websocketLogCallback(message):
     global wsLoggerClients
     for ws in wsLoggerClients:
         mainEventLoop.create_task(ws.send_text(f"{message}"))
 
-handler = CallbackHandler(callback=log_callback)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-#==============================================================================================================
 
-
-
+addLogCallback(websocketLogCallback)
+# ==============================================================================================================
 app = FastAPI()
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -248,8 +69,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-mainEventLoop = asyncio.get_event_loop()
+# ==============================================================================================================
 
 
 @app.get("/")
@@ -260,24 +80,20 @@ def index():
 @app.get("/screen")
 @app.get("/screen/{path}")
 def screen_path(path: str = None):
-    if WINDOWS:
-        image = mss2np()
-    else:
-        image = url2ImgNp("http://127.0.0.1:8888/screen.png")
-    
+    image = sci.getScreen()
     if path == "raw":
         return Response(
-        cv2.imencode('.png', image)[1].tobytes(),
-        headers={"Content-Type": "image/jpeg",
-                 "Cache-Control": "max-age=0"},
-    )
-  
+            cv2.imencode('.png', image)[1].tobytes(),
+            headers={"Content-Type": "image/jpeg",
+                     "Cache-Control": "max-age=0"},
+        )
+
     if path == "draw":
         image = drawHandelScreen(image)
     if path == "mask":
         image = handelScreen(image)
     return Response(
-        cv2.imencode('.jpg', image,[int(cv2.IMWRITE_JPEG_QUALITY), 70])[1].tobytes(),
+        cv2.imencode('.png', image)[1].tobytes(),
         headers={"Content-Type": "image/jpeg",
                  "Cache-Control": "max-age=0"},
     )
@@ -286,33 +102,18 @@ def screen_path(path: str = None):
 @app.get("/jmp")
 def jmp():
     logger.info("翻墙x1")
-    warframe.jump()
+    sci.warframe.jump()
 
 
 @app.get("/start")
 def start():
-    global fsm
-    if fsm.get_value() == -1:
-        logger.info("已发送开始指令")
-        ctr.click(BTN.BTN_LS)
-        ctr.sleep(100)
-        ctr.click(BTN.BTN_B)
-        ctr.sleep(1000)
-        ctr.wait()
-        fsm.set_value(0)
-    else:
-        logger.info("已在运行")
+    sci.resume()
+
 
 @app.get("/stop")
 def stop():
-    if fsm.get_value() != -1:
-        logger.info("已发送停止指令")
-        fsm.set_value(-1)
-        ctr.interrupt()
-        ctr.wait()
-        ctr.click(BTN.BTN_START)
-    else:
-        logger.info("已停止")
+    sci.pause()
+
 
 @app.get("/test")  # 测试函数放在这里运行
 def test():
@@ -322,7 +123,12 @@ def test():
     ctr.setRS(0, 0)
     ctr.wait()
     logger.info("测试函数执行完毕")
-    
+
+
+@app.get("/exit")
+def stop():
+    logger.info("退出信号")
+    os._exit(0)
 
 
 @app.websocket("/wsLogger")
@@ -340,6 +146,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 app.mount("/", StaticFiles(directory="controller/html"), name="static")
 
+
 def getServer(port):
     serverConfig = Config(
         app=app,
@@ -352,9 +159,6 @@ def getServer(port):
     return Server(serverConfig)
 
 
-if __name__ == "__main__":
-    serverInstance = getServer(4443)
-    init_logger()
-    threading.Thread(target=mainLoop, args=(fsm,ctr,TYPE,logger)).start()
-    threading.Thread(target=watcher, args=(fsm,ctr,TYPE,logger)).start()
-    mainEventLoop.run_until_complete(serverInstance.serve())
+serverInstance = getServer(4443)
+initUvicornLogger()
+mainEventLoop.run_until_complete(serverInstance.serve())

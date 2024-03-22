@@ -85,7 +85,7 @@
                 });
         }
         (() => {
-            setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 2000)
+            setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 500)
         })()
         const setupWebsocket = () => {
             const websocket = new WebSocket(`ws://${window.location.host}/wsLogger`);
@@ -110,7 +110,7 @@
 
 <body>
     <div class="container">
-            <img class="img" src="/screen" id="img">
+            <img class="img" src="/screen?t=-1" id="img">
         <div class="panel">
             <textarea class="console" id="console" disabled>
             </textarea>
@@ -118,7 +118,9 @@
                 <button class="button " onclick="performGetRequest('/jmp')">指挥官翻墙</button>
                 <button class="button" onclick="performGetRequest('/start')">开始</button>
                 <button class="button" onclick="performGetRequest('/stop')">停止</button>
-                <button class="button" onclick="performGetRequest('/test')">测试功能</button>
+                <button class="button" onclick="performGetRequest('/exit')">退出</button>
+                <!-- <button class="button" onclick="performGetRequest('/test')">测试功能</button> -->
+
             </div>
         </div>
     </div>

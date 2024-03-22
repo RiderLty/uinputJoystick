@@ -82,7 +82,7 @@ oi = CnOcr()
 while True:
     # img = url2ImgNp("http://192.168.3.155:4443/screenocr")
     # img = mss2np()
-    img = cv2.imread(r"D:\Pictures\Screenshots\warframe\bc4.png")
+    img = cv2.imread(r"C:\Users\lty65\projects\uinputJoystick\controller\assets\saveTmp\1710860279.1734593.png")
     img = update_image(img )
     if cv2.getTrackbarPos('show ocr', 'Parameter Tool') == 1:
         out = oi.ocr(img)
