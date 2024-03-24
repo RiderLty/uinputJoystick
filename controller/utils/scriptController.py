@@ -21,6 +21,9 @@ class scriptController():
             from cnocr import CnOcr
             self.ocrInstance = CnOcr()
         self.warframe = actions(self.ctr)
+        self.totalRelicValue = 0
+        self.totalRelicCount = 0
+
 
     def start(self,):
         threading.Thread(target=self.watcher).start()
@@ -32,6 +35,8 @@ class scriptController():
         self.goto(0)
 
     def resume(self):
+        self.totalRelicValue = 0
+        self.totalRelicCount = 0 
         if self.state.get_value() == -1:
             self.ctr.click(BTN.BTN_LS)
             self.ctr.sleep(100)
@@ -77,7 +82,7 @@ class scriptController():
 
     def autoSelectHT(self,):
         self.warframe.clusterReset()
-        maxValue = -1
+        maxValue = 0
         self.ctr.sleep(100)
         self.ctr.click(BTN.BTN_DPAD_DOWN)
         self.ctr.sleep(200)
@@ -106,7 +111,10 @@ class scriptController():
                 maxValue = value
                 self.ctr.click(BTN.BTN_A)
                 self.ctr.wait()
-            
+        self.totalRelicValue += maxValue
+        self.totalRelicCount += 1
+        self.logger.info(f"杜卡德总价值{self.totalRelicValue},遗物均值{(self.totalRelicValue / self.totalRelicCount):.4f}")
+    
     def watcher(self,):
         '''观察者 截图 识别 执行部分动作 控制状态机'''
         text = None
