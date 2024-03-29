@@ -32,16 +32,19 @@ from utils.scriptController import *
 # XBOX挂机的时候记得关闭辅助瞄准
 
 parser = argparse.ArgumentParser(usage="指定脚本类型\n", description="help info.")
-parser.add_argument("--type", type=str, default="nidus",help="执行的脚本 nidus/inaros ")
+parser.add_argument("--type", type=str, default="nidus",
+                    help="执行的脚本 nidus/inaros ")
 parser.add_argument("--screen", type=str, default="mss", help="截图获取方式 mss/url")
-parser.add_argument("--match", type=str, default="ocr",   help="匹配方式 ocr/template")
+parser.add_argument("--match", type=str, default="ocr",
+                    help="匹配方式 ocr/template")
 parser.add_argument("--relic", type=int, default=-1, help="开核桃人数 -1 ~ 4")
 args = parser.parse_args()
 
 WINDOWS = sys.platform.startswith('win')
 # ==============================================================================================================
 wsLoggerClients = set()
-ctr = scheduled(controller=controller()  if WINDOWS else controller("127.0.0.1:8889") )
+ctr = scheduled(controller=controller()
+                if WINDOWS else controller("127.0.0.1:8889"))
 sci = scriptController(
     ctr=ctr,
     logger=logger,
@@ -52,10 +55,17 @@ sci.start()
 mainEventLoop = asyncio.get_event_loop()
 # ==============================================================================================================
 
+
+history = []
+
+
 def websocketLogCallback(message):
-    global wsLoggerClients
+    global wsLoggerClients, history
+    history.append(message)
+    if len(history) > 1000:
+        del history[0]
     for ws in wsLoggerClients:
-        mainEventLoop.create_task(ws.send_text(f"{message}"))
+        mainEventLoop.create_task(ws.send_json(["new", f"{message}"]))
 
 
 addLogCallback(websocketLogCallback)
@@ -138,8 +148,8 @@ async def websocket_endpoint(websocket: WebSocket):
     wsLoggerClients.add(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
-            pass
+            await websocket.receive_text()
+            await websocket.send_json(["sync", history ])
     except Exception as e:
         wsLoggerClients.remove(websocket)
         pass

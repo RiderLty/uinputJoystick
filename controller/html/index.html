@@ -91,16 +91,26 @@
         let messages = []
         const setupWebsocket = () => {
             const websocket = new WebSocket(`ws://${window.location.host}/wsLogger`);
-            websocket.onopen = () => {
-                console.log('WebSocket连接已打开');
-            };
+
             websocket.onmessage = (event) => {
-                messages.push(event.data)
-                messages.length > 500 && messages.shift()
+                const data = JSON.parse(event.data)
+                console.log(data)
+                if(data[0] === "new"){
+                    messages.push(data[1])
+                }else if (data[0] === "sync"){
+                    messages = data[1]
+                }
+                //messages.length > 1000 && messages.shift()
                 const consoleTextArea = document.getElementById("console")
                 consoleTextArea.textContent  = messages.join("\n")
                 consoleTextArea.scrollTop = consoleTextArea.scrollHeight;
             };
+
+            websocket.onopen = () => {
+                console.log('WebSocket连接已打开');
+                websocket.send("ping")  
+            };
+
             websocket.onclose = (event) => {
                 console.log('WebSocket连接已关闭:', event.code, event.reason);
                 setTimeout(setupWebsocket, 100)
