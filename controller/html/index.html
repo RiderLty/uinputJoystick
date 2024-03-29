@@ -87,15 +87,18 @@
         (() => {
             setInterval(() => { document.querySelector("#img").src = `/screen?t=${Date.now()}` }, 500)
         })()
+        
+        let messages = []
         const setupWebsocket = () => {
             const websocket = new WebSocket(`ws://${window.location.host}/wsLogger`);
             websocket.onopen = () => {
                 console.log('WebSocket连接已打开');
             };
             websocket.onmessage = (event) => {
+                messages.push(event.data)
+                messages.length > 500 && messages.shift()
                 const consoleTextArea = document.getElementById("console")
-                consoleTextArea.textContent += "\n"
-                consoleTextArea.textContent += event.data
+                consoleTextArea.textContent  = messages.join("\n")
                 consoleTextArea.scrollTop = consoleTextArea.scrollHeight;
             };
             websocket.onclose = (event) => {

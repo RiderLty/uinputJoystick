@@ -40,50 +40,89 @@ def url2ImgPIL(url):
     return Image.open(BytesIO(requests.get(url).content)).convert("RGB")
 
 
-def mss2np(display_num=-1, zone=[(0, 0), (1920, 1080)]):
+def mss2np(display_num=-1, wh=None):
     '''display_num 显示器编号  1,2,3...    -1为主显示器
 
     zone 抓取区域 [(x1,y1),(x2,y2)] 左上角到右下角
 
     返回np格式的BGR图像
     '''
-    assert zone[0][0] < zone[1][0]
-    assert zone[0][1] < zone[1][1]
     with mss.mss() as sct:
         mon = sct.monitors[display_num]
-        monitor = {
-            "top": mon["top"] + zone[0][1],
-            "left": mon["left"] + zone[0][0],
-            "width": zone[1][0] - zone[0][0],  # 手动指定区域
-            "height": zone[1][1] - zone[0][1],
-        }
+        if wh == None:
+            monitor = {
+                "top": mon["top"],
+                "left": mon["left"] ,
+                "width": mon["width"], 
+                "height": mon["height"],
+            }
+        else:
+            monitor = {
+                "top": wh[0],
+                "left": wh[1],
+                "width": wh[2],  # 手动指定区域
+                "height": wh[3],
+            }
         screen = sct.grab(monitor)
         img = np.array(screen)
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         return img
 
 
-def mss2pil(display_num=-1, zone=[(0, 0), (1920, 1080)]):
+def mss2pil(display_num=-1, wh=None):
     '''display_num 显示器编号  1,2,3...    -1为主显示器
 
     zone 抓取区域 [(x1,y1),(x2,y2)] 左上角到右下角
 
     返回PIL的RGB图像
     '''
-    assert zone[0][0] < zone[1][0]
-    assert zone[0][1] < zone[1][1]
     with mss.mss() as sct:
         mon = sct.monitors[display_num]
-        monitor = {
-            "top": mon["top"] + zone[0][1],
-            "left": mon["left"] + zone[0][0],
-            "width": zone[1][0] - zone[0][0],  # 手动指定区域
-            "height": zone[1][1] - zone[0][1],
-        }
+        if wh == None:
+            monitor = {
+                "top": mon["top"],
+                "left": mon["left"] ,
+                "width": mon["width"],
+                "height": mon["height"],
+            }
+        else:
+            monitor = {
+                "top": wh[0],
+                "left": wh[1],
+                "width": wh[2],  # 手动指定区域
+                "height": wh[3],
+            }
         screen = sct.grab(monitor)
         img = Image.frombytes("RGB", screen.size, screen.bgra, "raw", "BGRX")
         return img
 
+
+def mss2BytesImg(display_num=-1, wh=None):
+    '''display_num 显示器编号  1,2,3...    -1为主显示器
+
+    zone 抓取区域 [(x1,y1),(x2,y2)] 左上角到右下角
+
+    返回PIL的RGB图像
+    '''
+    with mss.mss() as sct:
+        mon = sct.monitors[display_num]
+        if wh == None:
+            monitor = {
+                "top": mon["top"],
+                "left": mon["left"] ,
+                "width": mon["width"],
+                "height": mon["height"],
+            }
+        else:
+            monitor = {
+                "top": wh[0],
+                "left": wh[1],
+                "width": wh[2],  # 手动指定区域
+                "height": wh[3],
+            }
+        screen = sct.grab(monitor)
+        img_bytes = mss.tools.to_png(screen.rgb, screen.size)
+        return img_bytes
 
 def pil2np(PILImg: Image):
     return cv2.cvtColor(np.array(PILImg), cv2.COLOR_RGB2BGR)

@@ -37,18 +37,65 @@ class actions():
             self.ctr.sleep(50)
         self.ctr.wait()
 
-    def selectHT(self,):  # 开核桃 使用方向键导航 ，先到坐上然后用手柄确认
-        '''使用方向键导航到左上角，然后选择第一个核桃，完成后返回'''
-        self.ctr.click(BTN.BTN_DPAD_RIGHT)
-        self.ctr.sleep(100)
-        self.ctr.click(BTN.BTN_DPAD_DOWN)
-        self.ctr.sleep(100)
-        self.ctr.click(BTN.BTN_DPAD_RIGHT)
-        self.ctr.sleep(100)
-        for _ in range(6):
-            self.ctr.click(BTN.BTN_A, 50)
-            self.ctr.sleep(50)
+    def selectHT(self,):  # 开核桃
+        'Y Y left[xN] A X A'
+        self.ctr.click(BTN.BTN_Y)
+        self.ctr.sleep(300)
+        self.ctr.click(BTN.BTN_Y)
+        self.ctr.sleep(300)
+        for _ in range(1):
+            self.ctr.click(BTN.BTN_DPAD_LEFT)
+            self.ctr.sleep(300)
+        self.ctr.click(BTN.BTN_A)
+        self.ctr.sleep(300)
+        self.ctr.click(BTN.BTN_X)
+        self.ctr.sleep(300)
+        self.ctr.click(BTN.BTN_A)
         self.ctr.wait()
+        
+        
+    def selectHT_count_by_number(self,):  # 开核桃
+        'Y Y left[xN] A X A'
+        self.ctr.click(BTN.BTN_Y)
+        self.ctr.sleep(300)
+
+        self.ctr.click(BTN.BTN_DPAD_DOWN)     
+        self.ctr.sleep(300)
+        
+        self.ctr.click(BTN.BTN_DPAD_DOWN)     
+        self.ctr.sleep(300)
+        
+        self.ctr.click(BTN.BTN_DPAD_DOWN)     
+        self.ctr.sleep(300)
+        
+        self.ctr.click(BTN.BTN_A)     
+        self.ctr.sleep(300)
+
+        self.ctr.wait()
+
+        self.selectHT()
+
+
+
+    def selectHT_count_by_level(self,):  # 开核桃
+        'Y Y left[xN] A X A'
+        self.ctr.click(BTN.BTN_Y)
+        self.ctr.sleep(300)
+
+        self.ctr.click(BTN.BTN_DPAD_DOWN)     
+        self.ctr.sleep(300)
+        
+        self.ctr.click(BTN.BTN_DPAD_DOWN)     
+        self.ctr.sleep(300)
+        
+        self.ctr.click(BTN.BTN_A)     
+        self.ctr.sleep(300)
+
+        self.ctr.wait()
+
+        self.selectHT()
+
+
 
     def skill(self, num: int):
         '''使用手柄释放技能'''
@@ -83,40 +130,84 @@ class actions():
         self.panZ(800)
         self.panZ(800)
 
-    def mainLoopOnceWait_with_backRight(self,):  # 右下角翻滚是可以解除挂机的，然而直前直后不行
+    def mainLoop_nidus_old(self,):  # 右下角翻滚是可以解除挂机的，然而直前直后不行
         '''执行一次主循环，完成全部动作后返回'''
+        self.ctr.sleep(300)
+        self.ctr.click(BTN.BTN_B)
+        self.ctr.sleep(300)
+        for _ in range(4):
+            self.ctr.setLS(-1, -1)  # 左后方走
+            self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
+            self.skill(3)  # MAG 吸
+            self.ctr.sleep(800)
+            self.panZX4()  # 四发盘子
+            self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
+            self.skill(3)
+            self.ctr.sleep(800)
+            self.panZX4()  # 四发盘子
+            self.ctr.setLS(0, 0)
+            self.skill(4)  # 4技能
+            self.ctr.sleep(1100)
+            self.ctr.setLS(0, 1)  # 向前
+            self.ctr.sleep(50)
+            self.ctr.click(BTN.BTN_LB)  # 向前翻滚
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(1000)
+            self.skill(2)  # 2技能
+            for _ in range(10):
+                self.skill(1)
+                self.ctr.sleep(100)
+            self.ctr.sleep(600)
+            self.ctr.setLS(1, -1)
+            self.ctr.sleep(50)
+            self.ctr.click(BTN.BTN_LB, 100)  # 向右后翻滚
+            self.ctr.setLS(0, -1)
+            self.ctr.sleep(1000)
+            self.ctr.click(BTN.BTN_A)  # 跳跃
+            self.ctr.sleep(200)
+            self.ctr.click(BTN.BTN_DPAD_RIGHT, 200)  # 瞄准触发蜘蛛赋能
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(300)
+            self.ctr.wait()
+            
+    def mainLoop_nidus(self,):  # 右下角翻滚是可以解除挂机的，然而直前直后不行
+        '''执行一次主循环，完成全部动作后返回'''
+
+        self.ctr.press(KEY.KEY_X) #按住X，那么会在客机死亡时候自动救
         self.ctr.setLS(-1, -1)  # 左后方走
-        self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
-        self.skill(3)  # MAG 吸
-        self.ctr.sleep(800)
-        self.panZX4()  # 四发盘子
-        self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
-        self.skill(3)
-        self.ctr.sleep(800)
-        self.panZX4()  # 四发盘子
+        for i in range(3):
+            self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
+            self.ctr.sleep(830)
+            self.panZX4()  # 四发盘子
+        
         self.ctr.setLS(0, 0)
         self.skill(4)  # 4技能
-        self.ctr.sleep(1100)
+
+        self.ctr.sleep(800)
         self.ctr.setLS(0, 1)  # 向前
         self.ctr.sleep(50)
         self.ctr.click(BTN.BTN_LB)  # 向前翻滚
         self.ctr.setLS(0, 0)
-        self.ctr.sleep(1000)
-        self.skill(2)  # 2技能
-        for _ in range(10):
-            self.skill(1)
-            self.ctr.sleep(100)
-        self.ctr.sleep(600)
+        self.ctr.sleep(900)
+        self.ctr.release(KEY.KEY_X)
+        
+        self.ctr.press(BTN.BTN_RB)
+        self.ctr.sleep(50)
+        self.ctr.click(BTN.BTN_X,50)
+        self.ctr.sleep(700)
+        for _ in range(4):# axby
+            self.ctr.click(BTN.BTN_A ,50)
+            self.ctr.sleep(600)
+        self.ctr.release(BTN.BTN_RB)
+        
+        self.ctr.press(KEY.KEY_X) #按住X，那么会在客机死亡时候自动救
+        # self.ctr.sleep(500)
         self.ctr.setLS(1, -1)
         self.ctr.sleep(50)
         self.ctr.click(BTN.BTN_LB, 100)  # 向右后翻滚
-        self.ctr.setLS(0, -1)
-        self.ctr.sleep(1000)
-        self.ctr.click(BTN.BTN_A)  # 跳跃
-        self.ctr.sleep(200)
-        self.ctr.click(BTN.BTN_DPAD_RIGHT, 200)  # 瞄准触发蜘蛛赋能
-        self.ctr.setLS(0, 0)
-        self.ctr.sleep(300)
+        self.ctr.sleep(800)
+        self.ctr.setLS(0,0)
+        self.ctr.release(KEY.KEY_X)
         self.ctr.wait()
 
     def mainLoop_shoot_and_move(self):
@@ -133,25 +224,63 @@ class actions():
             self.ctr.sleep(10)
         self.ctr.wait()
         
-    def mainLoop_shoot_and_move_inaros(self):
-        self.ctr.setLS(0, 1)  # 向前
-        self.ctr.sleep(50)
-        self.ctr.click(BTN.BTN_LB)  # 向前翻滚
-        self.ctr.setLS(0, 0)
-        self.ctr.sleep(800)
+    def mainLoop_inaros(self):
+        for _ in range(4):
+            self.ctr.setLS(0, 1)  # 向前
+            self.ctr.sleep(50)
+            self.ctr.click(BTN.BTN_LB)  # 向前翻滚
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(800)
 
-        self.ctr.setLS(1, -1)
-        self.ctr.sleep(50)
-        self.ctr.click(BTN.BTN_LB)  # 向右后翻滚
-        self.ctr.setLS(0, 0)
-        self.ctr.sleep(800)
-        
-        self.ctr.setLS(-1, -1)  # 
-        self.ctr.sleep(1200)
-        self.ctr.setLS(0, 0)
-
-        self.ctr.press(BTN.BTN_DPAD_LEFT)
-        self.ctr.sleep(1000 * 7)
-        self.ctr.release(BTN.BTN_DPAD_LEFT)
+            self.ctr.setLS(1, -1)
+            self.ctr.sleep(50)
+            self.ctr.click(BTN.BTN_LB)  # 向右后翻滚
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(800)
+            
+            self.ctr.setLS(-1, -1)  # 
+            self.ctr.sleep(1200)
+            self.ctr.setLS(0, 0)
+            self.ctr.press(BTN.BTN_DPAD_LEFT)
+            self.ctr.sleep(1000 * 0.5)
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(1000 * 7.5)
+            
+            self.ctr.release(BTN.BTN_DPAD_LEFT)
 
         self.ctr.wait()
+            
+    def mainLoop_khora(self):
+        
+        for i in range(4):
+            self.ctr.click(BTN.BTN_B)
+            self.ctr.setLS(0, 1)  # 向前
+            self.ctr.sleep(100)
+            self.ctr.click(BTN.BTN_LB)  # 向前翻滚
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(800)
+            self.ctr.setLS(1, -1)
+            self.ctr.sleep(50)
+            self.ctr.click(BTN.BTN_LB)  # 向右后翻滚
+            self.ctr.setLS(0, 0)
+            self.ctr.sleep(800)
+            self.ctr.setLS(-1, -1)  # 
+            self.ctr.sleep(1200)
+            self.ctr.setLS(0, 0)
+            self.ctr.click(BTN.BTN_DPAD_RIGHT)
+            if i == 0 or i == 2:
+                self.skill(4)
+                self.ctr.sleep(900)
+                self.skill(3)
+                for j in range(5):
+                    self.skill(3)
+                    self.ctr.sleep(900)
+                self.skill(4)
+                self.ctr.sleep(900)
+            else:
+                for j in range(7):
+                    self.ctr.sleep(900)
+                    self.skill(3)
+            
+        self.ctr.wait()
+        #这里注意  整个循环中，不要有wait() 不然在外面的观察者尝试暂停之后，这里又会立即wait，导致动作无法执行
