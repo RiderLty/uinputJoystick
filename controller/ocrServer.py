@@ -86,6 +86,7 @@
 # #OCR
 
 import asyncio
+import logging
 from os.path import join as path_join
 import time
 
@@ -98,8 +99,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from uvicorn import Config, Server
 from utils.imgTools import pil2np
 from paddleocr import PaddleOCR
-import cv2
 from PIL import Image
+import coloredlogs
 
 p_ocr = PaddleOCR(use_angle_cls=True,  use_gpu = True , show_log=False,)
 app = FastAPI()
@@ -139,7 +140,7 @@ async def ocr(image: UploadFile):
                     "text":text,
                 })
                 allText += f"[{text}]"
-        print(f"OCR in {end-start :.4f}s\n{allText}\n" )
+        # print(f"OCR in {end-start :.4f}s\n{allText}\n" )
         return cnocrResults
     except Exception as e:
         print(e)
@@ -160,7 +161,15 @@ def getServer(port):
     return Server(serverConfig)
 
 mainEventLoop = asyncio.get_event_loop()
-serverInstance = getServer(8502)
+serverInstance = getServer(8501)
+LOGGER_NAMES = ("uvicorn", "uvicorn.access",)
+for logger_name in LOGGER_NAMES:
+    logging_logger = logging.getLogger(logger_name)
+    fmt = f"🌏%(asctime)s .%(levelname)s %(message)s"  # 📨
+    coloredlogs.install(
+        level=logging.WARN, logger=logging_logger, milliseconds=False, datefmt='%m-%d %H:%M:%S', fmt=fmt
+    )
+    
 mainEventLoop.run_until_complete(serverInstance.serve())
 
 # result = p_ocr.ocr(url2ImgNp("http://192.168.3.155:4443/screen"), cls=True)

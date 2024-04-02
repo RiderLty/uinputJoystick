@@ -103,7 +103,7 @@
                 //messages.length > 1000 && messages.shift()
                 const consoleTextArea = document.getElementById("console")
                 consoleTextArea.textContent  = messages.join("\n")
-                consoleTextArea.scrollTop = consoleTextArea.scrollHeight;
+                setTimeout( () => {consoleTextArea.scrollTop = consoleTextArea.scrollHeight }, 100)
             };
 
             websocket.onopen = () => {
@@ -132,7 +132,7 @@
                 <button class="button" onclick="performGetRequest('/start')">开始</button>
                 <button class="button" onclick="performGetRequest('/stop')">停止</button>
                 <button class="button" onclick="performGetRequest('/exit')">退出</button>
-                <!-- <button class="button" onclick="performGetRequest('/test')">测试功能</button> -->
+                <button class="button" onclick="performGetRequest('/upgradeRelic')">精炼</button>
 
             </div>
         </div>

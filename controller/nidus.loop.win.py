@@ -38,6 +38,9 @@ parser.add_argument("--screen", type=str, default="mss", help="截图获取方�
 parser.add_argument("--match", type=str, default="ocr",
                     help="匹配方式 ocr/template")
 parser.add_argument("--relic", type=int, default=-1, help="开核桃人数 -1 ~ 4")
+
+parser.add_argument("--notify", type=str, default=None, help="检测到死亡、锻氧则访问的提醒url")
+
 args = parser.parse_args()
 
 WINDOWS = sys.platform.startswith('win')
@@ -103,7 +106,7 @@ def screen_path(path: str = None):
     if path == "mask":
         image = handelScreen(image)
     return Response(
-        cv2.imencode('.png', image)[1].tobytes(),
+        cv2.imencode('.jpg', image ,[ int(cv2.IMWRITE_JPEG_QUALITY) , 72]  )[1].tobytes(),
         headers={"Content-Type": "image/jpeg",
                  "Cache-Control": "max-age=0"},
     )
@@ -128,11 +131,22 @@ def stop():
 @app.get("/test")  # 测试函数放在这里运行
 def test():
     logger.info("测试函数执行中")
-    ctr.setRS(0, 1)
-    ctr.sleep(300)
-    ctr.setRS(0, 0)
-    ctr.wait()
+    # ctr.setRS(0, 1)
+    # ctr.sleep(300)
+    # ctr.setRS(0, 0)
+    # ctr.wait()
     logger.info("测试函数执行完毕")
+
+@app.get("/upgradeRelic")#可以连续点击
+def upgradeRelic():
+    logger.info("A X A")
+    ctr.click(BTN.BTN_A)
+    ctr.sleep(200)
+    ctr.click(BTN.BTN_X)
+    ctr.sleep(200)
+    ctr.click(BTN.BTN_A)
+    ctr.sleep(1000)
+    # ctr.wait()
 
 
 @app.get("/exit")

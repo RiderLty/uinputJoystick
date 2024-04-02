@@ -173,11 +173,13 @@ class actions():
     def mainLoop_nidus(self,):  # 右下角翻滚是可以解除挂机的，然而直前直后不行
         '''执行一次主循环，完成全部动作后返回'''
 
-        self.ctr.press(KEY.KEY_X) #按住X，那么会在客机死亡时候自动救
         self.ctr.setLS(-1, -1)  # 左后方走
         for i in range(3):
+            self.ctr.press(KEY.KEY_X)# 四次秒复活机会
             self.ctr.click(BTN.BTN_DPAD_LEFT)  # 女魔发射
-            self.ctr.sleep(830)
+            self.ctr.sleep(30)
+            self.ctr.release(KEY.KEY_X)
+            self.ctr.sleep(800)
             self.panZX4()  # 四发盘子
         
         self.ctr.setLS(0, 0)
@@ -189,7 +191,6 @@ class actions():
         self.ctr.click(BTN.BTN_LB)  # 向前翻滚
         self.ctr.setLS(0, 0)
         self.ctr.sleep(900)
-        self.ctr.release(KEY.KEY_X)
         
         self.ctr.press(BTN.BTN_RB)
         self.ctr.sleep(50)
@@ -200,14 +201,12 @@ class actions():
             self.ctr.sleep(600)
         self.ctr.release(BTN.BTN_RB)
         
-        self.ctr.press(KEY.KEY_X) #按住X，那么会在客机死亡时候自动救
         # self.ctr.sleep(500)
         self.ctr.setLS(1, -1)
         self.ctr.sleep(50)
         self.ctr.click(BTN.BTN_LB, 100)  # 向右后翻滚
         self.ctr.sleep(800)
         self.ctr.setLS(0,0)
-        self.ctr.release(KEY.KEY_X)
         self.ctr.wait()
 
     def mainLoop_shoot_and_move(self):
@@ -284,3 +283,30 @@ class actions():
             
         self.ctr.wait()
         #这里注意  整个循环中，不要有wait() 不然在外面的观察者尝试暂停之后，这里又会立即wait，导致动作无法执行
+        
+    def mainLoop_nekros(self):
+        self.ctr.click(BTN.BTN_B)
+        self.ctr.setLS(0, 1)  # 向前
+        self.ctr.sleep(100)
+        self.ctr.click(BTN.BTN_LB)  # 向前翻滚
+        self.ctr.setLS(0, 0)
+        self.ctr.sleep(800)
+        self.ctr.setLS(1, -1)
+        self.ctr.sleep(50)
+        self.ctr.click(BTN.BTN_LB)  # 向右后翻滚
+        self.ctr.setLS(0, 0)
+        self.ctr.sleep(800)
+        self.ctr.setLS(-1, -1)  # 
+        self.ctr.sleep(1200)
+        self.ctr.setLS(0, 0)
+        self.ctr.click(BTN.BTN_DPAD_RIGHT)
+        self.ctr.click(BTN.BTN_B)
+        self.ctr.sleep(450)#亵渎
+        self.skill(3)
+        self.ctr.sleep(300)
+        self.skill(3)
+        self.ctr.sleep(1000)
+        for i in range(10):#集团1 复活队友
+            self.skill(1)
+            self.ctr.sleep(400)
+        self.ctr.wait()

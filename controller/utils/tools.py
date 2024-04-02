@@ -3,12 +3,14 @@ import logging
 import threading
 from time import sleep as s_sleep
 
+
 def sleep(ms):
     s_sleep(ms/1000)
 
 
 def remove_non_digits(text):
     return ''.join([char for char in text if char.isdigit()])
+
 
 def checkText(template, targets):
     for target in targets:
@@ -24,13 +26,14 @@ class CallbackHandler(logging.Handler):
 
     def emit(self, record):
         msg = self.format(record)
-        self.callback(msg)  
+        self.callback(msg)
 
 
 class scriptType(Enum):
     nidus_single = 0
     fire_multi = 1
-    
+
+
 class ThreadSafeValue:
     def __init__(self, value):
         self._value = value
@@ -47,9 +50,16 @@ class ThreadSafeValue:
         with self._lock:
             return self._value
 
-    def waitFor(self, value ):
+    def waitFor(self, value):
         # 等待self._value变为value 再返回
-        while self.get_value() != value:
+        # while self.get_value() != value:
+        #     with self._condition:
+        #         self._condition.wait()
+        # return self._value
+        self.waitForCondition(lambda x: x == value)
+
+    def waitForCondition(self, cond):
+        while not cond(self.get_value()):
             with self._condition:
                 self._condition.wait()
         return self._value
