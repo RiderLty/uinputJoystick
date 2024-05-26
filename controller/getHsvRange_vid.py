@@ -3,8 +3,6 @@ import cv2
 import mss
 import numpy as np
 from PIL import Image
-from cnocr import CnOcr
-
 from utils.imgTools import *
 
 
@@ -55,7 +53,6 @@ cv2.createTrackbar('Saturation Min', 'Parameter Tool', 0, 255, on_trackbar)
 cv2.createTrackbar('Saturation Max', 'Parameter Tool', 255, 255, on_trackbar)
 cv2.createTrackbar('Value Min', 'Parameter Tool', 0, 255, on_trackbar)
 cv2.createTrackbar('Value Max', 'Parameter Tool', 255, 255, on_trackbar)
-cv2.createTrackbar('show ocr', 'Parameter Tool', 0, 1, on_trackbar)
 # def button_callback(x):
 #     print("button click")
 # cv2.createButton('Button', button_callback, None, cv2.WINDOW_NORMAL)
@@ -73,7 +70,6 @@ def update_image(original_image):
     return result
 
 
-oi = CnOcr()
  #读取文件
 # while True:
 # img = screenCapturer()  # 获取BGR格式图像
@@ -83,9 +79,6 @@ while True:
     # img = mss2np()
     # img = cv2.imread(r"C:\Users\lty65\projects\uinputJoystick\controller\assets\saveTmp\1710860279.1734593.png")
     img = update_image(img )
-    if cv2.getTrackbarPos('show ocr', 'Parameter Tool') == 1:
-        out = oi.ocr(img)
-        img = drawOCR2np(    img   , out,   r"C:\Windows\Fonts\msyhl.ttc", True)
     cv2.imshow('Display', img)
     if cv2.waitKey(1) == 27:
         break

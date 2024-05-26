@@ -31,7 +31,7 @@ class KEY(Enum):
     KEY_0 = 11
     KEY_MINUS = 12
     KEY_EQUALS = 13
-    KEY_BCKSPC = 14
+    KEY_BACKSPACE = 14
     KEY_TAB = 15
     KEY_Q = 16
     KEY_W = 17
